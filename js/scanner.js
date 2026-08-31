@@ -12,6 +12,18 @@ export class FieldScanner {
     this.ctx = null;
   }
 
+  async ensureJsQr() {
+    if (window.jsQR) return;
+    await new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "./js/vendor/jsqr.js";
+      s.async = true;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error("jsqr"));
+      document.head.appendChild(s);
+    });
+  }
+
   async start(videoEl, onCode) {
     const gen = ++this.gen;
     await this.stop(true);
@@ -53,6 +65,9 @@ export class FieldScanner {
     }
     if (gen !== this.gen) return false;
 
+    if (!this.detector) {
+      try { await this.ensureJsQr(); } catch { /* cámara igual abre */ }
+    }
     if (!this.canvas) {
       this.canvas = document.createElement("canvas");
       this.ctx = this.canvas.getContext("2d", { willReadFrequently: true });

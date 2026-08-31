@@ -1,10 +1,8 @@
-const CACHE_NAME = "cocina-qb-v110";
+const CACHE_NAME = "cocina-qb-v117";
 
 const PRECACHE = [
   "./",
   "./index.html",
-  "./install.html",
-  "./setup.html",
   "./manifest.webmanifest",
   "./css/app.css",
   "./js/app.js",
@@ -15,18 +13,10 @@ const PRECACHE = [
   "./js/calc.js",
   "./js/sync.js",
   "./js/scanner.js",
-  "./js/setup.js",
-  "./js/vendor/qrcode.js",
-  "./js/vendor/jsqr.js",
   "./data/config.json",
-  "./data/trabajadores.json",
   "./data/supervisors.json",
   "./data/lotes_catalogo.json",
   "./assets/logo-qberries.png",
-  "./assets/entrada.png",
-  "./icons/icon.svg",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {

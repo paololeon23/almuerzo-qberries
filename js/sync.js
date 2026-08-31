@@ -17,7 +17,12 @@ export async function pingServer(url) {
   const u = (url || store.getScriptUrl()).trim();
   if (!u) return { ok: false, error: "sin_url" };
   try {
-    const res = await fetch(u, { method: "GET", cache: "no-store" });
+    const res = await fetch(u, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "omit",
+      referrerPolicy: "no-referrer",
+    });
     const text = await res.text();
     return JSON.parse(text);
   } catch (err) {
@@ -41,6 +46,8 @@ export async function postRecord(record, url) {
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body,
     cache: "no-store",
+    credentials: "omit",
+    referrerPolicy: "no-referrer",
   });
   const text = await res.text();
   let json;

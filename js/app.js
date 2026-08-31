@@ -1,5 +1,5 @@
 import { APP_VERSION, FORM_TYPES, TZ, encodeQr, parseQr, normalizeDni, todayKey, uuid, nowParts } from "./config.js";
-import { bindAppHeight, bindFieldLock, isFieldDevice, preventBounce } from "./device.js";
+import { bindAppHeight, preventBounce } from "./device.js";
 import { recordsOfToday, store } from "./store.js";
 import { onVoiceState, setVoiceEnabled, speak, speakApellido, unlockVoice, voiceEnabled } from "./voice.js";
 import { computeHeadcount } from "./calc.js";
@@ -896,7 +896,7 @@ function welcomeView() {
   render(`<section class="welcome">
     <div class="welcome-hero">
       <figure class="welcome-frame">
-        <img src="./assets/entrada.png" alt="" />
+        <img src="./assets/entrada.png" alt="" width="270" height="320" decoding="async" fetchpriority="high" />
       </figure>
     </div>
     <div class="welcome-sheet">
@@ -1416,7 +1416,6 @@ function viewFromHash() {
 }
 
 function guardView(view) {
-  if (!isFieldDevice()) return "lock";
   if (view === "lock") return "welcome";
   if (view === "scan" || view === "picksup" || view === "order" || view === "dia") return supervisor() ? "home" : "supervisor";
   if (!supervisor() && view !== "welcome" && view !== "supervisor") return "supervisor";
@@ -2083,9 +2082,6 @@ async function onClick(e) {
 async function boot() {
   bindInstallPrompt();
   bindAppHeight();
-  bindFieldLock((phone) => {
-    if (!phone && state.view !== "lock") show("lock", { replace: true });
-  });
   onVoiceState((on, phrase) => {
     state.lastSpeak = on ? phrase : "";
     const el = document.getElementById("speakbar");
@@ -2180,10 +2176,6 @@ async function boot() {
   if (cfg.appsScriptUrl) store.setScriptUrl(cfg.appsScriptUrl);
   dropScanCola();
 
-  if (!isFieldDevice()) {
-    show("lock", { replace: true });
-    return;
-  }
   await store.restoreSesion();
   const hash = viewFromHash();
   if (supervisor()) {

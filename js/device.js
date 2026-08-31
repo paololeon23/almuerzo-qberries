@@ -3,13 +3,11 @@ function isPhone() {
   if (/iPad/i.test(ua)) return false;
   if (/iPhone|iPod/i.test(ua)) return true;
   if (/Android/i.test(ua) && /Mobile/i.test(ua)) return true;
-  const uaData = navigator.userAgentData;
-  if (uaData && uaData.mobile === true) return true;
   return false;
 }
 
 export function isFieldDevice() {
-  return isPhone();
+  return true;
 }
 
 export function bindAppHeight() {

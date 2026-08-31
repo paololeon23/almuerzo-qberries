@@ -1,8 +1,6 @@
 import {
   STORAGE_KEYS,
   HISTORY_TTL_MS,
-  SESSION_COOKIE,
-  SESSION_MAX_AGE_SEC,
   todayKey,
   TZ,
   normalizeDni,
@@ -32,39 +30,18 @@ function write(key, value) {
   }
 }
 
-function cookieDni() {
+function wipeOldSessionCookie() {
   try {
-    const m = document.cookie.match(new RegExp(`(?:^|; )${SESSION_COOKIE}=([^;]*)`));
-    if (!m) return "";
-    const dni = normalizeDni(decodeURIComponent(m[1]));
-    return isSesionDni(dni) ? dni : "";
+    document.cookie = "qb_sup=; Path=/; Max-Age=0; SameSite=Lax";
+    if (location.protocol === "https:") {
+      document.cookie = "qb_sup=; Path=/; Max-Age=0; SameSite=Lax; Secure";
+    }
   } catch {
-    return "";
+    /* Safari / modo privado */
   }
 }
 
-function writeCookie(dni) {
-  try {
-    const parts = [
-      `${SESSION_COOKIE}=${encodeURIComponent(dni)}`,
-      "Path=/",
-      "SameSite=Lax",
-      `Max-Age=${SESSION_MAX_AGE_SEC}`,
-    ];
-    if (location.protocol === "https:") parts.push("Secure");
-    document.cookie = parts.join("; ");
-  } catch {
-    /* iOS / modo privado: localStorage sigue siendo el respaldo */
-  }
-}
-
-function clearCookie() {
-  try {
-    document.cookie = `${SESSION_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
-  } catch {
-    /* ignore */
-  }
-}
+wipeOldSessionCookie();
 
 function slimSesion(dni) {
   return { v: 1, dni, at: Date.now() };
@@ -100,7 +77,7 @@ async function idbPutDni(dni) {
       tx.onerror = () => reject(tx.error);
     });
   } catch {
-    /* el celular sigue con localStorage / cookie */
+    /* el celular sigue con localStorage */
   }
 }
 
@@ -189,16 +166,14 @@ export const store = {
   getSesionDni() {
     const local = read(STORAGE_KEYS.sesion, null);
     const fromStore = normalizeDni(local?.dni || local?.id);
-    if (isSesionDni(fromStore)) return fromStore;
-    return cookieDni();
+    return isSesionDni(fromStore) ? fromStore : "";
   },
   setSesion(s) {
     const dni = normalizeDni(s?.dni || s?.id);
     if (!isSesionDni(dni)) return false;
     const ok = write(STORAGE_KEYS.sesion, slimSesion(dni));
-    writeCookie(dni);
     idbPutDni(dni);
-    return ok || !!cookieDni();
+    return ok;
   },
   async restoreSesion() {
     let dni = this.getSesionDni();
@@ -213,7 +188,7 @@ export const store = {
     } catch {
       /* ignore */
     }
-    clearCookie();
+    wipeOldSessionCookie();
     idbDelDni();
   },
   getLocalWorkers() {

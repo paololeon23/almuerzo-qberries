@@ -1,9 +1,7 @@
 export const APP_VERSION = "1.0.0";
-export const CACHE_NAME = "cocina-qb-v110";
+export const CACHE_NAME = "cocina-qb-v117";
 export const TZ = "America/Lima";
 export const HISTORY_TTL_MS = 48 * 60 * 60 * 1000;
-export const SESSION_COOKIE = "qb_sup";
-export const SESSION_MAX_AGE_SEC = 10 * 365 * 24 * 60 * 60;
 
 export const STORAGE_KEYS = {
   cola: "cola_pendiente",
