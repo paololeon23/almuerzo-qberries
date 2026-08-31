@@ -1,4 +1,4 @@
-import { APP_VERSION, APP_ASSETS, FORM_TYPES, TZ, encodeQr, parseQr, normalizeDni, todayKey, uuid, nowParts } from "./config.js";
+import { APP_VERSION, APP_ASSETS, FORM_TYPES, TZ, encodeQr, parseQr, normalizeDni, isSesionDni, todayKey, uuid, nowParts } from "./config.js";
 import { bindAppHeight, preventBounce } from "./device.js";
 import { recordsOfToday, store } from "./store.js";
 import { onVoiceState, setVoiceEnabled, speak, speakApellido, unlockVoice, voiceEnabled } from "./voice.js";
@@ -1107,8 +1107,8 @@ function render(html) {
 function showAlert(title, text) {
   speak(text);
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
-    <div class="modal" role="dialog" aria-modal="true">
-      <div class="modal-ico">×</div>
+    <div class="modal" role="dialog" aria-modal="true" data-act="stay">
+      <button class="modal-close" data-act="dismiss-alert" type="button" aria-label="Cerrar"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M6.2 5.1 5.1 6.2 10.9 12l-5.8 5.8 1.1 1.1L12 13.1l5.8 5.8 1.1-1.1L13.1 12l5.8-5.8-1.1-1.1L12 10.9 6.2 5.1z"/></svg></button>
       <h3>${esc(title)}</h3>
       <p>${esc(text)}</p>
       <button class="btn" data-act="dismiss-alert" type="button">Entendido</button>
@@ -1119,6 +1119,21 @@ function showAlert(title, text) {
 function dismissAlert() {
   document.getElementById("alert-host")?.replaceChildren();
   document.body.classList.remove("modal-open");
+}
+
+function alertIsOpen() {
+  return !!document.getElementById("alert-host")?.childElementCount;
+}
+
+function resumeCam() {
+  if (state.loggingIn) return;
+  if (state.view !== "supervisor") return;
+  const video = document.getElementById("cam");
+  if (video?.srcObject && scanner.active) {
+    video.play().catch(() => {});
+    return;
+  }
+  startCamHere();
 }
 
 function welcomeView() {
@@ -1267,7 +1282,7 @@ function showEmergencyWarn() {
       ${sectionHead("Cualquier persona", "El botón rojo deja entrar a cualquiera. Serás responsable de solicitar la comida. Escanea tu QR. Después podrás elegir etapa y comedor.")}
       <p class="extra-note">Ten cuidado, por favor. Esto es solo por emergencia.</p>
       <div class="footer-actions solo" style="margin-top:8px">
-        <button class="btn leaf" data-act="dismiss-alert" type="button">Entendido</button>
+        <button class="btn leaf" data-act="confirm-emergency" type="button">Entendido</button>
       </div>
     </div>
   </div>`);
@@ -1287,24 +1302,40 @@ function setEmergencyUi(on) {
       ? "Rojo activo. Escanea tu QR. Puede entrar cualquiera."
       : "Verde: solo supervisores autorizados. Escanee su QR.";
   }
+  const bar = document.querySelector(".appbar-titles p");
+  if (bar) bar.textContent = on ? "Rojo · cualquier persona" : "Verde · solo supervisores";
   setScanLive(on ? "Escanea tu QR. Cualquier persona puede entrar." : "Listo para escanear el QR de supervisor.", true);
 }
 
 function toggleEmergencySup() {
+  if (state.loggingIn) return;
   if (state.emergencyPending) {
     state.emergencyPending = false;
+    dismissAlert();
+    speak("Verde. Solo supervisores.", { flush: true });
     setEmergencyUi(false);
-    speak("Verde. Solo supervisores.");
+    resumeCam();
     return;
   }
   state.emergencyPending = true;
+  speak("Rojo. Cualquier persona puede entrar. Ten cuidado, por favor.", { flush: true });
   setEmergencyUi(true);
   showEmergencyWarn();
-  speak("Rojo. Cualquier persona puede entrar. Ten cuidado, por favor.");
 }
 
 function enterEmergencySupervisor(person) {
   const dni = normalizeDni(person?.dni || person?.id);
+  if (!isSesionDni(dni)) {
+    speak("Código no válido. Solo el DNI.");
+    showScanHit({
+      dni: dni || "—",
+      nombre: "No se leyó un DNI",
+      cargo: "—",
+      ok: false,
+      note: "Acerca de nuevo el código.",
+    });
+    return;
+  }
   const official = findSupervisor({ dni });
   if (official) {
     state.emergencyPending = false;
@@ -1414,12 +1445,24 @@ function scanHitBox() {
 }
 
 function showLoginGate(person) {
+  const dni = normalizeDni(person?.dni || person?.id);
+  if (!isSesionDni(dni)) {
+    speak("Código no válido. Solo el DNI.");
+    return;
+  }
   const ap = twoApellidos(person);
   state.loggingIn = true;
+  state.emergencyPending = false;
+  state.scanQueue.length = 0;
   scanner.stop();
-  store.setSesion(person);
+  if (!store.setSesion(person)) {
+    state.loggingIn = false;
+    speak("No se pudo entrar. Intente de nuevo.");
+    startCamHere();
+    return;
+  }
   ensureWorkers();
-  speak(`Bienvenido${ap ? ` ${ap}` : ""}`);
+  speak(`Bienvenido${ap ? ` ${ap}` : ""}`, { flush: true });
   openAlert(`<div class="modal-back login-gate" data-act="stay">
     <div class="modal login-load" role="dialog" aria-modal="true" data-act="stay">
       <p class="login-kicker">Q BERRIES</p>
@@ -1861,6 +1904,7 @@ async function onScan(raw) {
 
 async function handleOneScan(raw) {
   if (state.loggingIn) return;
+  if (state.scanMode === "sup" && alertIsOpen()) return;
   const parsed = parseQr(raw);
   const dni = parsed?.dni || parsed?.id || "";
   if (!parsed || !dni) {
@@ -1876,7 +1920,7 @@ async function handleOneScan(raw) {
       return;
     }
     if (state.emergencyPending) {
-      await ensureWorkers();
+      try { await ensureWorkers(); } catch { /* entra igual */ }
       const worker = findWorkerByDni(dni);
       enterEmergencySupervisor(worker || { dni, id: dni });
       return;
@@ -1887,7 +1931,7 @@ async function handleOneScan(raw) {
       nombre: "No autorizado",
       cargo: "No está en supervisores de cosecha",
       ok: false,
-      note: "Ese DNI no está en la lista autorizada. Si es emergencia, use el ícono de usuario.",
+      note: "Ese DNI no está en la lista autorizada. Si es emergencia, use el botón rojo.",
     });
     return;
   }
@@ -2063,7 +2107,7 @@ async function onClick(e) {
     e.stopPropagation();
     return;
   }
-  const once = ["send-lista", "reload-app", "clear-cache", "logout", "drop-mesa", "save-temp-person", "enter"];
+  const once = ["send-lista", "reload-app", "clear-cache", "logout", "drop-mesa", "save-temp-person", "add-emergency-sup", "confirm-emergency", "enter"];
   if (once.includes(act)) {
     if (tapLock) return;
     tapLock = true;
@@ -2084,7 +2128,11 @@ async function onClick(e) {
     show(btn.dataset.id);
     return;
   }
-  if (act === "dismiss-alert") { dismissAlert(); return; }
+  if (act === "dismiss-alert") {
+    dismissAlert();
+    if (state.view === "supervisor") resumeCam();
+    return;
+  }
   if (act === "start-cam") { unlockVoice(); startCamHere(); return; }
   if (act === "stop-cam") { scanner.stop(); return; }
   if (act === "enter") { enterApp(); return; }
@@ -2209,6 +2257,12 @@ async function onClick(e) {
   }
   if (act === "add-emergency-sup") {
     toggleEmergencySup();
+    return;
+  }
+  if (act === "confirm-emergency") {
+    dismissAlert();
+    resumeCam();
+    speak("Ten cuidado, por favor. Escanea tu QR.", { flush: true });
     return;
   }
   if (act === "add-temp-person") {

@@ -7,9 +7,17 @@ let onSpeak = () => {};
 const queue = [];
 let playing = false;
 let watch = 0;
+let currentUtter = null;
+let speakGen = 0;
 
 const FEMALE = /paulina|m[oó]nica|monica|luc[ií]a|pen[eé]lope|lupe|conchita|lola|salom[eé]|mar[ií]a|sof[ií]a|camila|isabela|dalia|fernanda|m[ií]a\b|paloma|rosa|carmen|laura|andrea|valentina|ximena|elena|ana\b|sabrina|isabel|carla|paola|female|femenin|mujer|woman/i;
 const MALE = /juan|diego|jorge|carlos|enrique|miguel|pablo|pedro|santiago|andr[eé]s|alberto|francisco|antonio|male|masculin|hombre|\bman\b/i;
+
+function isAppleTouch() {
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPod|iPad/i.test(ua)) return true;
+  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
 
 export function onVoiceState(fn) {
   onSpeak = fn;
@@ -32,10 +40,14 @@ export function unlockVoice() {
   if (!s) return;
   try {
     if (s.paused) s.resume();
-    pickVoice();
-    if (unlocked) return;
-    unlocked = true;
+  } catch { /* iPhone */ }
+  pickVoice();
+  if (unlocked) return;
+  unlocked = true;
+  if (isAppleTouch()) return;
+  try {
     const u = new SpeechSynthesisUtterance(".");
+    currentUtter = u;
     u.volume = 0.01;
     u.rate = 2;
     u.lang = "es-MX";
@@ -77,41 +89,47 @@ function pickVoice() {
   return cachedVoice;
 }
 
-function finishPlay() {
+function finishPlay(gen) {
+  if (gen !== speakGen) return;
   playing = false;
   speaking = false;
   onSpeak(false, "");
   window.clearTimeout(watch);
-  window.setTimeout(playNext, 80);
+  window.setTimeout(() => {
+    if (gen !== speakGen) return;
+    playNext();
+  }, isAppleTouch() ? 40 : 80);
 }
 
 function playNext() {
   const s = synth();
   if (!s || playing || !queue.length || !voiceEnabled()) return;
-  if (s.paused) {
-    try { s.resume(); } catch { /* iPhone */ }
-  }
+  try {
+    if (s.paused) s.resume();
+  } catch { /* iPhone */ }
   const phrase = queue.shift();
   if (!phrase) {
     playNext();
     return;
   }
+  const gen = speakGen;
   playing = true;
   speaking = true;
   onSpeak(true, phrase);
   const u = new SpeechSynthesisUtterance(phrase);
+  currentUtter = u;
   const v = pickVoice();
   u.lang = v?.lang || "es-MX";
   u.rate = 0.95;
   u.pitch = v && FEMALE.test(`${v.name} ${v.voiceURI}`) ? 1 : 1.18;
   if (v) u.voice = v;
-  u.onend = finishPlay;
-  u.onerror = finishPlay;
-  watch = window.setTimeout(finishPlay, 8000);
+  u.onend = () => finishPlay(gen);
+  u.onerror = () => finishPlay(gen);
+  watch = window.setTimeout(() => finishPlay(gen), 9000);
   try {
     s.speak(u);
   } catch {
-    finishPlay();
+    finishPlay(gen);
   }
 }
 
@@ -120,15 +138,22 @@ export function speak(text, opts = {}) {
   unlockVoice();
   const phrase = String(text).replace(/\s+/g, " ").trim();
   if (!phrase) return;
+  const s = synth();
   if (opts.flush) {
+    speakGen += 1;
     queue.length = 0;
-    const s = synth();
     try { s?.cancel(); } catch { /* ignore */ }
     playing = false;
     speaking = false;
     window.clearTimeout(watch);
+    queue.push(phrase);
+    if (isAppleTouch()) {
+      playNext();
+      return;
+    }
+    const gen = speakGen;
     window.setTimeout(() => {
-      queue.push(phrase);
+      if (gen !== speakGen) return;
       playNext();
     }, 80);
     return;
