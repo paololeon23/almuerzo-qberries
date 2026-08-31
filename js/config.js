@@ -1,5 +1,24 @@
-export const APP_VERSION = "1.0.2";
-export const CACHE_NAME = "cocina-qb-v129";
+export const APP_VERSION = "1.0.8";
+export const CACHE_NAME = "cocina-qb-v138";
+export const APP_ASSETS = [
+  "./",
+  "./index.html",
+  "./manifest.webmanifest",
+  "./sw.js",
+  "./css/app.css",
+  "./js/app.js",
+  "./js/config.js",
+  "./js/device.js",
+  "./js/store.js",
+  "./js/voice.js",
+  "./js/calc.js",
+  "./js/sync.js",
+  "./js/scanner.js",
+  "./data/config.json",
+  "./data/supervisors.json",
+  "./data/lotes_catalogo.json",
+  "./assets/logo-qberries.png",
+];
 export const TZ = "America/Lima";
 export const HISTORY_TTL_MS = 48 * 60 * 60 * 1000;
 

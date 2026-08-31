@@ -58,9 +58,25 @@ html, body {
 }
 img, svg { -webkit-user-drag: none; user-select: none; }
 button, a, input, textarea, select { font: inherit; color: inherit; }
-button { appearance: none; border: 0; background: none; padding: 0; margin: 0; cursor: pointer; }
-button:active { opacity: 0.8; }
-button:disabled { opacity: 0.4; }
+button {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+button svg, button img { pointer-events: none; }
+button:active:not(:disabled) { opacity: 0.86; }
+button:disabled,
+.btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: default;
+}
 input, textarea {
   width: 100%;
   border: 0;
@@ -146,16 +162,12 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   color: #111827;
   box-shadow: inset 0 0 0 1px #d1d5db;
 }
-.btn-ghost:hover,
-.footer-actions .btn.ghost:hover { color: #111827; background: #f8fafc; }
 .btn-primary,
 .footer-actions .btn.leaf {
   background: var(--btn);
   color: #fff;
   box-shadow: none;
 }
-.btn-primary:hover,
-.footer-actions .btn.leaf:hover { background: var(--btn-deep); }
 .section-card {
   background: #fff;
   border-radius: 18px;
@@ -212,6 +224,72 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   box-shadow: inset 0 0 0 1px #e5e7eb;
   display: grid;
   place-items: center;
+}
+.emerg-fab {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(22px + var(--safe-b));
+  z-index: 40;
+  width: 64px;
+  height: auto;
+  min-height: 64px;
+  margin: 0;
+  padding: 8px 6px 7px;
+  border-radius: 18px;
+  background: var(--red);
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(227, 30, 36, 0.42);
+  display: grid;
+  place-items: center;
+  gap: 2px;
+}
+.emerg-fab svg {
+  width: 26px;
+  height: 26px;
+  stroke-width: 2.4;
+}
+.emerg-fab b {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+.emerg-fab.on {
+  background: var(--red-deep);
+  box-shadow: 0 0 0 4px var(--red-soft), 0 8px 22px rgba(227, 30, 36, 0.5);
+}
+.shell:has(.emerg-fab) .scan-fit {
+  padding-bottom: calc(96px + var(--safe-b));
+}
+.access-tag {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 12px;
+  padding: 5px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.access-tag.green {
+  background: var(--green-soft);
+  color: var(--green-deep);
+}
+.access-tag.red {
+  background: var(--red-soft);
+  color: var(--red);
+}
+.scan-panel .section-bar { background: var(--green); }
+.scan-panel.is-emerg .section-bar { background: var(--red); }
+.scan-panel .finder-sq::before,
+.scan-panel .finder-sq::after {
+  border-color: var(--green);
+}
+.scan-panel.is-emerg .finder-sq::before,
+.scan-panel.is-emerg .finder-sq::after {
+  border-color: var(--red);
 }
 .count-card {
   display: grid;
@@ -311,7 +389,7 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   opacity: 0.42;
 }
 .lote-pills button {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 8px;
   border-radius: 11px;
   background: transparent;
@@ -687,7 +765,6 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   box-shadow: 0 8px 18px rgba(31, 61, 42, 0.2);
   margin: 18px auto 8px;
 }
-.cta:hover { background: var(--btn-deep); }
 .install-cta {
   display: inline-flex;
   align-items: center;
@@ -848,8 +925,8 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
 .row-del {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border-radius: 50%;
   background: #fff5f5;
@@ -857,8 +934,7 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   box-shadow: inset 0 0 0 1px #fecaca;
   flex: 0 0 auto;
 }
-.row-del svg { display: block; }
-.row-del:hover { background: #fee2e2; color: #b91c1c; }
+.row-del svg { display: block; pointer-events: none; }
 .st {
   margin-left: auto;
   font-size: 11px;
@@ -926,14 +1002,20 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   color: #fff;
   box-shadow: 0 8px 18px rgba(31, 61, 42, 0.2);
 }
-.btn:hover { background: var(--btn-deep); }
 .btn.ghost {
   background: #fff;
   color: var(--ink);
-  box-shadow: var(--shadow);
+  box-shadow: inset 0 0 0 1.5px #d1d5db;
 }
-.btn.ghost:hover { color: var(--red); }
-.btn.leaf { background: var(--btn); box-shadow: 0 8px 18px rgba(31, 61, 42, 0.2); }
+.btn.leaf { background: var(--btn); color: #fff; box-shadow: 0 8px 18px rgba(31, 61, 42, 0.2); }
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover { background: var(--btn-deep); }
+  .btn.ghost:hover { color: var(--ink); background: #f8fafc; }
+  .cta:hover { background: var(--btn-deep); }
+  .btn.cam:hover { background: var(--btn-deep); }
+  .btn.stop:hover { background: #e7ece7; color: #111827; }
+  .row-del:hover { background: #fee2e2; color: #b91c1c; }
+}
 .cam-actions {
   display: flex;
   flex-direction: column;
@@ -966,13 +1048,11 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   color: #fff;
   box-shadow: 0 4px 10px rgba(31, 61, 42, 0.16);
 }
-.btn.cam:hover { background: var(--btn-deep); }
 .btn.stop {
   background: #f1f4f1;
   color: #111827;
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
 }
-.btn.stop:hover { background: #e7ece7; color: #111827; }
 .qr-ic { flex: 0 0 auto; display: block; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
@@ -1188,6 +1268,7 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   -webkit-overflow-scrolling: touch;
 }
 .scan-panel {
+  position: relative;
   flex: 0 0 auto;
   min-height: 0;
   overflow: visible;
@@ -1196,6 +1277,7 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   margin-bottom: 0;
 }
 .scan-panel .section-head { flex: 0 0 auto; }
+.scan-panel .scan-head { flex: 0 0 auto; }
 .scan-wrap {
   flex: 0 0 auto;
   min-height: 0;
@@ -1442,6 +1524,9 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   border: 0;
   box-shadow: none;
   background: transparent;
+}
+.modal .footer-actions.solo {
+  grid-template-columns: 1fr;
 }
 .modal .footer-actions .btn {
   width: 100%;

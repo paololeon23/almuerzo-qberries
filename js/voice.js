@@ -133,6 +133,7 @@ export function speak(text, opts = {}) {
     }, 80);
     return;
   }
+  if (queue.length >= 8) queue.splice(0, queue.length - 7);
   queue.push(phrase);
   playNext();
 }

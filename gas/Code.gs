@@ -23,7 +23,7 @@ var COLS_TRABAJADORES = [
   "trabajador_nombre",
   "comida",
   "comedor",
-  "lote"
+  "etapa"
 ];
 
 var COLS_SUPERVISORES = [
@@ -33,7 +33,7 @@ var COLS_SUPERVISORES = [
   "supervisor_apellido",
   "comida",
   "comedor",
-  "lote",
+  "etapa",
   "total_comidas"
 ];
 
@@ -81,7 +81,7 @@ function doPost(e) {
     var sap = cell(p.supervisor_apellido, 80);
     var comida = cell(p.comida, 40);
     var comedor = cell(p.comedor, 40);
-    var lote = cell(p.lote || p.lote_codigo, 80);
+    var etapa = cell(p.etapa, 40);
 
     var extra = body.type === "extra" || p.extra === true;
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -101,7 +101,7 @@ function doPost(e) {
             cell(x.nombre, 80),
             comida,
             comedor,
-            lote
+            etapa
           ]);
         }
         shX.getRange(shX.getLastRow() + 1, 1, extraRows.length, COLS_TRABAJADORES.length).setValues(extraRows);
@@ -134,7 +134,7 @@ function doPost(e) {
           cell(w.nombre, 80),
           comida,
           comedor,
-          lote
+          etapa
         ]);
       }
       shT.getRange(shT.getLastRow() + 1, 1, rows.length, COLS_TRABAJADORES.length).setValues(rows);
@@ -147,7 +147,7 @@ function doPost(e) {
       sap,
       comida,
       comedor,
-      lote,
+      etapa,
       n
     ]);
 

@@ -1,4 +1,4 @@
-import { APP_VERSION, FORM_TYPES, TZ, encodeQr, parseQr, normalizeDni, todayKey, uuid, nowParts } from "./config.js";
+import { APP_VERSION, APP_ASSETS, FORM_TYPES, TZ, encodeQr, parseQr, normalizeDni, todayKey, uuid, nowParts } from "./config.js";
 import { bindAppHeight, preventBounce } from "./device.js";
 import { recordsOfToday, store } from "./store.js";
 import { onVoiceState, setVoiceEnabled, speak, speakApellido, unlockVoice, voiceEnabled } from "./voice.js";
@@ -102,6 +102,7 @@ const state = {
   online: navigator.onLine,
   busy: false,
   loggingIn: false,
+  emergencyPending: false,
   extraOn: false,
   admin: false,
   logoTaps: 0,
@@ -111,6 +112,7 @@ const state = {
   dniSelected: {},
   histPage: 1,
   lotes: [],
+  swGuardUntil: 0,
 };
 
 function emptyDraft(worker = null) {
@@ -124,9 +126,17 @@ function emptyDraft(worker = null) {
   };
 }
 
+function freshFetch() {
+  try {
+    return sessionStorage.getItem("qb_updating") ? "reload" : "no-store";
+  } catch {
+    return "no-store";
+  }
+}
+
 async function loadJson(path, fallback) {
   try {
-    const res = await fetch(path);
+    const res = await fetch(path, { cache: freshFetch() });
     return await res.json();
   } catch {
     return fallback;
@@ -201,6 +211,7 @@ async function loadTrabajadores() {
 }
 
 function ensureWorkers() {
+  if (state.wrkByDni.size) return Promise.resolve();
   if (!state.workersPromise) state.workersPromise = loadTrabajadores();
   return state.workersPromise;
 }
@@ -242,6 +253,17 @@ function supervisor() {
   if (!dni) return null;
   const hit = state.supByDni.get(dni);
   if (hit) return { ...hit, apellido: twoApellidos(hit) };
+  const ses = store.getSesion();
+  if (ses?.emergencia) {
+    return {
+      id: dni,
+      dni,
+      apellido: ses.apellido || "",
+      nombre: ses.nombre || "",
+      cargo: "Supervisor de emergencia",
+      emergencia: true,
+    };
+  }
   if (!state.supByDni.size) {
     return { id: dni, dni, apellido: "", nombre: "", cargo: "" };
   }
@@ -458,7 +480,7 @@ function showHistorialModal() {
     const n = p.trabajadores_unicos || (p.personas || []).length;
     const who = `${n || "—"} ${n === 1 ? "solicitud" : "solicitudes"}`;
     const hora = horaMinutos(p.hora_local);
-    const meta = [p.lote || "—", p.comedor || "—", hora].filter(Boolean).join(" · ");
+    const meta = [p.etapa || "—", p.comedor || "—", hora].filter(Boolean).join(" · ");
     return `<div class="hist-row">
       <div>
         <b>${esc(who)}</b>
@@ -483,7 +505,7 @@ function showPerfilModal() {
   const names = nameParts(s || {});
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
-      ${sectionHead("Perfil", "Supervisor del turno.")}
+      ${sectionHead("Perfil", s?.emergencia ? "Supervisor de emergencia. Eres responsable de pedir la comida." : "Supervisor del turno.")}
       <p class="hit-dni">DNI ${esc(s?.dni || s?.id || "—")}</p>
       <h3 class="hit-name">${esc(twoApellidos(s) || "—")}</h3>
       <p class="hit-cargo">${esc([names.nombre, s?.cargo].filter(Boolean).join(" · ") || "—")}</p>
@@ -499,10 +521,28 @@ function showUpdatingVeil() {
   closeFab();
   try { sessionStorage.setItem("qb_updating", "1"); } catch { /* ignore */ }
   document.documentElement.classList.add("is-updating");
-  document.documentElement.classList.remove("update-done");
-  const host = document.getElementById("alert-host");
-  if (host) host.innerHTML = "";
-  document.body.classList.remove("modal-open");
+  document.documentElement.classList.remove("update-done", "update-full");
+  const bar = document.getElementById("update-bar");
+  const pct = document.getElementById("update-pct");
+  if (bar) bar.style.width = "0%";
+  if (pct) pct.textContent = "0%";
+}
+
+function animateUpdateBar(from, to, ms) {
+  return new Promise((resolve) => {
+    const bar = document.getElementById("update-bar");
+    const pct = document.getElementById("update-pct");
+    const start = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / ms);
+      const p = Math.round(from + (to - from) * (1 - (1 - t) ** 3));
+      if (bar) bar.style.width = `${p}%`;
+      if (pct) pct.textContent = `${p}%`;
+      if (t < 1) requestAnimationFrame(tick);
+      else resolve();
+    };
+    requestAnimationFrame(tick);
+  });
 }
 
 function hideUpdatingVeil() {
@@ -511,24 +551,98 @@ function hideUpdatingVeil() {
   if (bar) bar.style.width = "100%";
   if (pct) pct.textContent = "100%";
   try { sessionStorage.removeItem("qb_updating"); } catch { /* ignore */ }
-  document.documentElement.classList.add("update-done");
   window.setTimeout(() => {
-    document.documentElement.classList.remove("is-updating", "update-done");
-  }, 280);
+    document.documentElement.classList.add("update-done");
+    window.setTimeout(() => {
+      document.documentElement.classList.remove("is-updating", "update-done", "update-full");
+      const host = document.getElementById("alert-host");
+      if (host) host.innerHTML = "";
+      document.body.classList.remove("modal-open");
+    }, 360);
+  }, 450);
 }
 
-async function wipeAppCache() {
+async function pullLatestFiles() {
+  try {
+    navigator.serviceWorker?.controller?.postMessage("CLEAR_APP_CACHE");
+  } catch { /* sigue */ }
   try {
     const keys = await caches.keys();
     await Promise.all(keys.map((k) => caches.delete(k)));
   } catch { /* sigue */ }
+  await Promise.all(APP_ASSETS.map((path) =>
+    fetch(path, { cache: "reload", credentials: "same-origin" }).catch(() => null)
+  ));
   try {
-    const reg = await navigator.serviceWorker?.getRegistration();
-    if (reg) {
-      await reg.update();
-      if (reg.waiting) reg.waiting.postMessage("SKIP_WAITING");
-    }
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map((reg) => {
+      try {
+        reg.waiting?.postMessage("SKIP_WAITING");
+        reg.installing?.postMessage("SKIP_WAITING");
+      } catch { /* sigue */ }
+      return reg.unregister();
+    }));
   } catch { /* sigue */ }
+}
+
+async function runAppUpdate() {
+  showUpdatingVeil();
+  speak("Actualizando app");
+  state.swGuardUntil = Date.now() + 20000;
+  const bar = animateUpdateBar(0, 85, 2000);
+  await Promise.all([
+    flushQueue().catch(() => {}),
+    pullLatestFiles(),
+  ]);
+  await bar;
+  await animateUpdateBar(85, 100, 350);
+  try { sessionStorage.setItem("qb_updating", "100"); } catch { /* ignore */ }
+  document.documentElement.classList.add("update-full");
+  const next = new URL(location.href);
+  next.searchParams.set("_up", String(Date.now()));
+  window.setTimeout(() => location.replace(next.href), 400);
+}
+
+function stripUpdateQuery() {
+  try {
+    const url = new URL(location.href);
+    if (!url.searchParams.has("_up")) return;
+    url.searchParams.delete("_up");
+    const qs = url.searchParams.toString();
+    history.replaceState(null, "", `${url.pathname}${qs ? `?${qs}` : ""}${url.hash}`);
+  } catch { /* ignore */ }
+}
+
+function watchAppUpdates() {
+  if (!("serviceWorker" in navigator)) return;
+  const ping = () => {
+    if (document.visibilityState !== "visible") return;
+    navigator.serviceWorker.getRegistration()
+      .then((reg) => reg?.update())
+      .catch(() => {});
+  };
+  window.setInterval(ping, 60 * 1000);
+  document.addEventListener("visibilitychange", ping);
+  window.addEventListener("online", ping);
+  window.addEventListener("focus", ping);
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (Date.now() < state.swGuardUntil) return;
+    try {
+      if (sessionStorage.getItem("qb_updating")) return;
+    } catch { /* ignore */ }
+    waitThenReload();
+  });
+}
+
+function waitThenReload() {
+  if (state.loggingIn || state.handlingScan || state.busy) {
+    window.setTimeout(waitThenReload, 1600);
+    return;
+  }
+  state.swGuardUntil = Date.now() + 20000;
+  showUpdatingVeil();
+  try { sessionStorage.setItem("qb_updating", "100"); } catch { /* ignore */ }
+  location.reload();
 }
 
 function versionNewer(local, remote) {
@@ -544,14 +658,14 @@ function versionNewer(local, remote) {
 async function detectAppUpdate() {
   let remote = {};
   try {
-    const res = await fetch("./data/config.json", { cache: "no-store" });
+    const res = await fetch("./data/config.json", { cache: "reload" });
     remote = await res.json();
   } catch { /* sin red */ }
   let waiting = false;
   try {
     const reg = await navigator.serviceWorker?.getRegistration();
     if (reg) {
-      await Promise.race([reg.update(), new Promise((r) => setTimeout(r, 600))]);
+      await Promise.race([reg.update(), new Promise((r) => setTimeout(r, 800))]);
       waiting = !!(reg.waiting || reg.installing);
     }
   } catch { /* sin sw */ }
@@ -562,27 +676,13 @@ async function detectAppUpdate() {
   };
 }
 
-async function runAppUpdate() {
-  showUpdatingVeil();
-  const bar = document.getElementById("update-bar");
-  const pct = document.getElementById("update-pct");
-  if (bar) bar.style.width = "80%";
-  if (pct) pct.textContent = "80%";
-  speak("Actualizando app");
-  await Promise.race([flushQueue().catch(() => {}), new Promise((r) => setTimeout(r, 300))]);
-  await wipeAppCache();
-  if (bar) bar.style.width = "100%";
-  if (pct) pct.textContent = "100%";
-  location.reload();
-}
-
 function showUpdateModal() {
   closeFab();
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
-      ${sectionHead("Actualizar", "Revisa si hay una versión nueva.")}
+      ${sectionHead("Actualizar", "Baja la última versión y recarga la app.")}
       <p class="app-ver" id="update-ver">Versión ${esc(APP_VERSION)}</p>
-      <p class="update-status" id="update-status">Buscando actualización…</p>
+      <p class="update-status" id="update-status">Buscando en el servidor…</p>
       <div class="update-actions">
         <button class="btn ghost" data-act="clear-cache" type="button">Borrar caché</button>
         <button class="btn leaf" data-act="reload-app" type="button">Actualizar app</button>
@@ -600,12 +700,12 @@ function showUpdateModal() {
       status.classList.add("new");
       if (ver && info.latest) ver.textContent = `Esta app ${APP_VERSION} · Nueva ${info.latest}`;
     } else {
-      status.textContent = "Ya está al día. Igual puede actualizar.";
+      status.textContent = "Al día. Igual puede pulsar Actualizar app para bajar lo último.";
       status.classList.add("ok");
     }
   }).catch(() => {
     const status = document.getElementById("update-status");
-    if (status) status.textContent = "Sin red. Pulse Actualizar app igual.";
+    if (status) status.textContent = "Sin red. Pulse Actualizar app cuando tenga señal.";
   });
 }
 
@@ -780,6 +880,16 @@ function comedores() {
   ];
 }
 
+function etapas() {
+  return ["LICAPA I", "LICAPA II"];
+}
+
+function currentEtapa() {
+  const list = etapas();
+  const saved = store.getPrefs().etapa;
+  return list.includes(saved) ? saved : list[0];
+}
+
 function currentComedor() {
   const list = comedores();
   const saved = store.getPrefs().comedor;
@@ -823,21 +933,18 @@ function pickNorm(s) {
   return String(s || "").toLowerCase().replace(/[·•.,\-_/]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-function pickSelect(id, value, options, placeholder) {
+function pickSelect(id, value, options) {
   const current = options.find(([val]) => val === value) || options[0] || ["", "—"];
-  const rows = options.map(([val, lab, extra]) => {
+  const rows = options.map(([val, lab]) => {
     const on = val === current[0];
-    const hay = pickNorm(`${val} ${lab} ${extra || ""}`);
-    return `<button type="button" class="pick-opt${on ? " on" : ""}" data-act="pick-opt" data-pick="${esc(id)}" data-id="${esc(val)}" data-label="${esc(lab)}" data-search="${esc(hay)}">${esc(lab)}</button>`;
+    return `<button type="button" class="pick-opt${on ? " on" : ""}" data-act="pick-opt" data-pick="${esc(id)}" data-id="${esc(val)}" data-label="${esc(lab)}">${esc(lab)}</button>`;
   }).join("");
   return `<div class="pick" data-pick="${esc(id)}" data-value="${esc(current[0])}">
     <button type="button" class="pick-btn" data-act="pick-open" data-pick="${esc(id)}">
       <span class="pick-value">${esc(current[1])}</span>
     </button>
     <div class="pick-panel" hidden>
-      <input class="pick-search" type="text" enterkeyhint="search" autocomplete="off" placeholder="${esc(placeholder)}" />
       <div class="pick-list">${rows}</div>
-      <p class="pick-empty" hidden>Sin coincidencias</p>
     </div>
   </div>`;
 }
@@ -943,11 +1050,12 @@ function showSummaryModal() {
   const mesa = getMesa();
   const meal = currentLote();
   const n = mesa.length;
-  const comedorOpts = comedores().map((name) => [name, name, `comedor ${name}`]);
+  const etapaOpts = etapas().map((name) => [name, name]);
+  const comedorOpts = comedores().map((name) => [name, name]);
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
       <div class="summary-top">
-        ${sectionHead("Solicitud de almuerzo", state.extraOn ? "Entra como extra (se olvidó o llegó tarde). Va a Comidas extras." : "Confirme el comedor antes de enviar.")}
+        ${sectionHead("Solicitud de almuerzo", state.extraOn ? "Entra como extra (se olvidó o llegó tarde). Va a Comidas extras." : "Confirme etapa y comedor antes de enviar.")}
         ${netFlag()}
       </div>
       <div class="summary-stat">
@@ -957,8 +1065,12 @@ function showSummaryModal() {
       <p class="summary-auth"><span>Autoriza</span><strong>${esc(authLabel())}</strong></p>
       <div class="summary-fields">
         <div class="pick-field">
+          <p class="pick-label">Etapa</p>
+          ${pickSelect("sel-etapa", currentEtapa(), etapaOpts)}
+        </div>
+        <div class="pick-field">
           <p class="pick-label">Comedor</p>
-          ${pickSelect("sel-comedor", currentComedor(), comedorOpts, "Buscar comedor")}
+          ${pickSelect("sel-comedor", currentComedor(), comedorOpts)}
         </div>
       </div>
       <div class="footer-actions">
@@ -1142,26 +1254,94 @@ function scanHelp() {
   return `<aside class="scan-help">
     <p class="scan-help-title">Qué hacer</p>
     <ol>
-      <li>Active la cámara.</li>
-      <li>Acerca el QR al recuadro. Es el DNI.</li>
-      <li>Si está autorizado, puede pedir almuerzo.</li>
+      <li>Verde: solo supervisores. Escanee su QR.</li>
+      <li>Rojo: cualquier persona, por emergencia.</li>
+      <li>Si entra en rojo, usted pide la comida. Tenga cuidado.</li>
     </ol>
   </aside>`;
 }
 
+function showEmergencyWarn() {
+  openAlert(`<div class="modal-back" data-act="dismiss-alert">
+    <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
+      ${sectionHead("Cualquier persona", "El botón rojo deja entrar a cualquiera. Serás responsable de solicitar la comida. Escanea tu QR. Después podrás elegir etapa y comedor.")}
+      <p class="extra-note">Ten cuidado, por favor. Esto es solo por emergencia.</p>
+      <div class="footer-actions solo" style="margin-top:8px">
+        <button class="btn leaf" data-act="dismiss-alert" type="button">Entendido</button>
+      </div>
+    </div>
+  </div>`);
+}
+
+function setEmergencyUi(on) {
+  document.querySelector(".emerg-fab")?.classList.toggle("on", on);
+  document.querySelector(".scan-panel")?.classList.toggle("is-emerg", on);
+  const tag = document.getElementById("access-tag");
+  if (tag) {
+    tag.className = `access-tag ${on ? "red" : "green"}`;
+    tag.textContent = on ? "Cualquier persona" : "Solo supervisores";
+  }
+  const sub = document.querySelector(".scan-panel .scan-head .section-head p");
+  if (sub) {
+    sub.textContent = on
+      ? "Rojo activo. Escanea tu QR. Puede entrar cualquiera."
+      : "Verde: solo supervisores autorizados. Escanee su QR.";
+  }
+  setScanLive(on ? "Escanea tu QR. Cualquier persona puede entrar." : "Listo para escanear el QR de supervisor.", true);
+}
+
+function toggleEmergencySup() {
+  if (state.emergencyPending) {
+    state.emergencyPending = false;
+    setEmergencyUi(false);
+    speak("Verde. Solo supervisores.");
+    return;
+  }
+  state.emergencyPending = true;
+  setEmergencyUi(true);
+  showEmergencyWarn();
+  speak("Rojo. Cualquier persona puede entrar. Ten cuidado, por favor.");
+}
+
+function enterEmergencySupervisor(person) {
+  const dni = normalizeDni(person?.dni || person?.id);
+  const official = findSupervisor({ dni });
+  if (official) {
+    state.emergencyPending = false;
+    showLoginGate(official);
+    return;
+  }
+  const parsed = nameParts(person);
+  state.emergencyPending = false;
+  showLoginGate({
+    id: dni,
+    dni,
+    apellido: parsed.apellido,
+    nombre: parsed.nombre,
+    nombreCompleto: parsed.nombreCompleto,
+    cargo: "Supervisor de emergencia",
+    emergencia: true,
+  });
+}
+
 function supervisorView() {
   state.scanMode = "sup";
+  const emerg = !!state.emergencyPending;
   render(`<div class="shell">
-    ${appBar({ title: "Pedir almuerzo", sub: "Solo si está autorizado", back: "back-welcome" })}
+    ${appBar({ title: "Pedir almuerzo", sub: emerg ? "Rojo · cualquier persona" : "Verde · solo supervisores", back: "back-welcome" })}
     <div class="scan-fit">
-      <section class="section-card scan-panel">
-        ${sectionHead("Permiso", "Escanee el QR. Si está autorizado, puede pedir almuerzo.")}
+      <section class="section-card scan-panel${emerg ? " is-emerg" : ""}">
+        <div class="scan-head">
+          ${sectionHead("Permiso", emerg ? "Rojo activo. Escanea tu QR. Puede entrar cualquiera." : "Verde: solo supervisores autorizados. Escanee su QR.")}
+        </div>
+        <p class="access-tag ${emerg ? "red" : "green"}" id="access-tag">${emerg ? "Cualquier persona" : "Solo supervisores"}</p>
         ${scanBox()}
-        <p class="scan-live" id="scan-live">Toca Activar cámara QR.</p>
+        <p class="scan-live" id="scan-live">${emerg ? "Escanea tu QR. Cualquier persona puede entrar." : "Toca Activar cámara QR."}</p>
         ${scanHitBox()}
         ${scanHelp()}
       </section>
     </div>
+    <button class="emerg-fab${emerg ? " on" : ""}" data-act="add-emergency-sup" type="button" aria-label="Entrar como cualquier persona">${userIcon()}<b>Cualquiera</b></button>
   </div>`);
   startCamHere();
 }
@@ -1239,12 +1419,12 @@ function showLoginGate(person) {
   scanner.stop();
   store.setSesion(person);
   ensureWorkers();
-  speak(`Bienvenido ${ap}`);
+  speak(`Bienvenido${ap ? ` ${ap}` : ""}`);
   openAlert(`<div class="modal-back login-gate" data-act="stay">
     <div class="modal login-load" role="dialog" aria-modal="true" data-act="stay">
       <p class="login-kicker">Q BERRIES</p>
       <h3>Iniciando sesión</h3>
-      <p>Bienvenido, ${esc(ap)}</p>
+      <p>Bienvenido${ap ? `, ${esc(ap)}` : ""}</p>
       <div class="login-bar" aria-hidden="true"><i id="login-bar"></i></div>
       <p class="login-pct" id="login-pct">0%</p>
     </div>
@@ -1303,7 +1483,7 @@ function homeView() {
   const mesa = getMesa();
   const slice = pageSlice(mesa);
   render(`<div class="shell${isSendLocked() ? " is-locked" : ""}">
-    ${appBar({ title: "Solicitud de almuerzo", sub: `Turno · ${twoApellidos(s) || "supervisor"}` })}
+    ${appBar({ title: "Solicitud de almuerzo", sub: `Turno · ${twoApellidos(s) || "supervisor"}${s?.emergencia ? " · Emergencia" : ""}` })}
     <div class="scroll">
       ${loteCard()}
       <section class="section-card">
@@ -1604,12 +1784,10 @@ function scanPayload(worker) {
     area: worker.cargo || worker.area || "",
     tipo_formulario: "pedido",
     hizo_pedido: true,
-    lote: currentCampoLoteLabel(),
-    lote_codigo: currentCampoLote(),
+    etapa: currentEtapa(),
     comida: currentLote(),
     comedor: currentComedor(),
     platos_detalle: currentLote(),
-    plato_principal: currentCampoLoteLabel(),
   };
 }
 
@@ -1645,11 +1823,29 @@ async function registerPerson(worker, { silent = false } = {}) {
   state.mesaPage = 1;
   const ap = twoApellidos(worker) || worker.apellido || "";
   if (!silent) speakApellido(ap);
-  refreshPendPill();
   return { result: { status: "lista" }, already: !!onMesa };
 }
 
 async function onScan(raw) {
+  const parsed = parseQr(raw);
+  const dni = parsed?.dni || parsed?.id || "";
+  if (state.scanMode === "wrk" && dni) {
+    if (getMesa().some((p) => p.id === dni)) {
+      if (!state.handlingScan && !state.scanQueue.length) {
+        const ap = twoApellidos(findWorkerByDni(dni) || {}) || dni;
+        showScanHit({
+          dni,
+          nombre: ap,
+          cargo: "—",
+          ok: false,
+          note: "Ya está en la lista. Intenta con otro trabajador.",
+        });
+        speak("Ya está en la lista. Intenta con otro trabajador.");
+      }
+      return;
+    }
+    if (state.scanQueue.some((q) => normalizeDni(parseQr(q)?.dni || parseQr(q)?.id) === dni)) return;
+  }
   state.scanQueue.push(raw);
   if (state.handlingScan) return;
   state.handlingScan = true;
@@ -1659,6 +1855,7 @@ async function onScan(raw) {
     }
   } finally {
     state.handlingScan = false;
+    refreshMesaUi();
   }
 }
 
@@ -1673,18 +1870,25 @@ async function handleOneScan(raw) {
   }
   if (state.scanMode === "sup") {
     const hit = findSupervisor(parsed);
-    if (!hit) {
-      speak("No autorizado.");
-      showScanHit({
-        dni,
-        nombre: "No autorizado",
-        cargo: "No está en supervisores de cosecha",
-        ok: false,
-        note: "Ese DNI no está en la lista autorizada.",
-      });
+    if (hit) {
+      state.emergencyPending = false;
+      showLoginGate(hit);
       return;
     }
-    showLoginGate(hit);
+    if (state.emergencyPending) {
+      await ensureWorkers();
+      const worker = findWorkerByDni(dni);
+      enterEmergencySupervisor(worker || { dni, id: dni });
+      return;
+    }
+    speak("No autorizado.");
+    showScanHit({
+      dni,
+      nombre: "No autorizado",
+      cargo: "No está en supervisores de cosecha",
+      ok: false,
+      note: "Ese DNI no está en la lista autorizada. Si es emergencia, use el ícono de usuario.",
+    });
     return;
   }
   if (isSendLocked()) {
@@ -1701,10 +1905,11 @@ async function handleOneScan(raw) {
       ok: false,
       note: "Ese DNI no está en trabajadores. Use el ícono si es temporal.",
     });
-    speak("No está en la lista.", { flush: true });
+    speak("No está en la lista.");
     return;
   }
   if (getMesa().some((p) => p.id === worker.dni)) {
+    if (state.scanQueue.length) return;
     const ap = twoApellidos(worker) || worker.apellido || "";
     showScanHit({
       dni: worker.dni,
@@ -1713,7 +1918,7 @@ async function handleOneScan(raw) {
       ok: false,
       note: "Ya está en la lista. Intenta con otro trabajador.",
     });
-    speak("Ya está en la lista. Intenta con otro trabajador.", { flush: true });
+    speak("Ya está en la lista. Intenta con otro trabajador.");
     return;
   }
   await registerPerson(worker);
@@ -1724,7 +1929,6 @@ async function handleOneScan(raw) {
     ok: true,
     note: "Registrado. Siguiente.",
   });
-  refreshMesaUi();
 }
 
 async function sendLista() {
@@ -1771,8 +1975,7 @@ async function sendLista() {
         hizo_pedido: true,
         extra,
         trabajadores_unicos: n,
-        lote: currentCampoLoteLabel(),
-        lote_codigo: currentCampoLote(),
+        etapa: currentEtapa(),
         comida,
         comedor: currentComedor(),
         lote_lista_id: loteId,
@@ -1840,22 +2043,32 @@ async function doSync() {
 
 async function clearAppCache() {
   store.clearDraftsOnly();
-  if (navigator.serviceWorker?.controller) {
-    navigator.serviceWorker.controller.postMessage("CLEAR_APP_CACHE");
-  }
-  try {
-    const keys = await caches.keys();
-    await Promise.all(keys.map((k) => caches.delete(k)));
-  } catch { /* ignore */ }
   speak("App limpia. Los pedidos siguen.");
-  window.setTimeout(() => window.location.reload(), 400);
+  await pullLatestFiles();
+  const next = new URL(location.href);
+  next.searchParams.set("_up", String(Date.now()));
+  window.setTimeout(() => location.replace(next.href), 300);
 }
+
+let tapLock = false;
 
 async function onClick(e) {
   const btn = e.target.closest("[data-act]");
   if (!btn) return;
+  if (btn.disabled || btn.getAttribute("disabled") !== null) return;
   unlockVoice();
   const act = btn.dataset.act;
+  if (act === "stay") {
+    if (!e.target.closest(".pick")) closePicks();
+    e.stopPropagation();
+    return;
+  }
+  const once = ["send-lista", "reload-app", "clear-cache", "logout", "drop-mesa", "save-temp-person", "enter"];
+  if (once.includes(act)) {
+    if (tapLock) return;
+    tapLock = true;
+    window.setTimeout(() => { tapLock = false; }, 700);
+  }
   if (act === "tab") {
     state.tab = btn.dataset.id;
     if (btn.dataset.id === "home") {
@@ -1880,12 +2093,14 @@ async function onClick(e) {
   if (act === "scan-wrk") { goScan("wrk"); return; }
   if (act === "back-welcome") {
     state.entered = false;
+    state.emergencyPending = false;
     show("welcome");
     return;
   }
   if (act === "cancel-scan") {
     if (state.scanMode === "sup") {
       state.entered = false;
+      state.emergencyPending = false;
       show("welcome");
     } else show("home");
     return;
@@ -1893,11 +2108,6 @@ async function onClick(e) {
   if (act === "home") {
     if (!supervisor()) show("supervisor");
     else show("home");
-    return;
-  }
-  if (act === "stay") {
-    if (!e.target.closest(".pick")) closePicks();
-    e.stopPropagation();
     return;
   }
   if (act === "toggle-fab") {
@@ -1997,6 +2207,10 @@ async function onClick(e) {
     runAppUpdate();
     return;
   }
+  if (act === "add-emergency-sup") {
+    toggleEmergencySup();
+    return;
+  }
   if (act === "add-temp-person") {
     if (isSendLocked()) { warnLocked(); return; }
     showTempPersonModal();
@@ -2061,12 +2275,6 @@ async function onClick(e) {
     wrap.classList.add("open");
     const panel = wrap.querySelector(".pick-panel");
     if (panel) panel.hidden = false;
-    const inp = wrap.querySelector(".pick-search");
-    if (inp) {
-      inp.value = "";
-      filterPick(wrap, "");
-      inp.focus();
-    }
     return;
   }
   if (act === "pick-opt") {
@@ -2074,6 +2282,7 @@ async function onClick(e) {
     const pick = btn.dataset.pick;
     const id = btn.dataset.id;
     const lab = btn.dataset.label || btn.textContent.trim();
+    if (pick === "sel-etapa") store.setPrefs({ etapa: id });
     if (pick === "sel-comedor") store.setPrefs({ comedor: id });
     const wrap = btn.closest(".pick");
     if (wrap) {
@@ -2173,6 +2382,7 @@ async function onClick(e) {
     store.clearRecientes();
     store.clearMesa();
     store.clearSesion();
+    state.emergencyPending = false;
     speak("Turno cerrado. Se borraron los DNI guardados.");
     show("supervisor");
     return;
@@ -2204,6 +2414,8 @@ async function onClick(e) {
 }
 
 async function boot() {
+  stripUpdateQuery();
+  state.swGuardUntil = Date.now() + 12000;
   bindInstallPrompt();
   bindAppHeight();
   onVoiceState((on, phrase) => {
@@ -2263,7 +2475,10 @@ async function boot() {
   window.addEventListener("hashchange", syncFromUrl);
 
   if ("serviceWorker" in navigator) {
-    try { await navigator.serviceWorker.register("./sw.js"); } catch { /* offline first run */ }
+    try {
+      await navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" });
+    } catch { /* offline first run */ }
+    watchAppUpdates();
   }
 
   const [cfg, sup, lotes] = await Promise.all([
@@ -2304,7 +2519,7 @@ async function boot() {
   await store.restoreSesion();
   const hash = viewFromHash();
   const wasUpdating = (() => {
-    try { return sessionStorage.getItem("qb_updating") === "1"; } catch { return false; }
+    try { return !!sessionStorage.getItem("qb_updating"); } catch { return false; }
   })();
   if (supervisor()) {
     store.setSesion(supervisor());

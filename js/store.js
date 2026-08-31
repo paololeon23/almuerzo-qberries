@@ -43,8 +43,15 @@ function wipeOldSessionCookie() {
 
 wipeOldSessionCookie();
 
-function slimSesion(dni) {
-  return { v: 1, dni, at: Date.now() };
+function slimSesion(s) {
+  const dni = typeof s === "string" ? normalizeDni(s) : normalizeDni(s?.dni || s?.id);
+  const row = { v: 1, dni, at: Date.now() };
+  if (s && typeof s === "object" && s.emergencia) {
+    row.emergencia = true;
+    row.apellido = String(s.apellido || "").trim();
+    row.nombre = String(s.nombre || "").trim();
+  }
+  return row;
 }
 
 const IDB_NAME = "cocina-qb";
@@ -160,8 +167,9 @@ export const store = {
     write(STORAGE_KEYS.prefs, { ...this.getPrefs(), ...patch });
   },
   getSesion() {
-    const dni = this.getSesionDni();
-    return dni ? slimSesion(dni) : null;
+    const local = read(STORAGE_KEYS.sesion, null);
+    const dni = normalizeDni(local?.dni || local?.id);
+    return isSesionDni(dni) ? local : null;
   },
   getSesionDni() {
     const local = read(STORAGE_KEYS.sesion, null);
@@ -171,14 +179,24 @@ export const store = {
   setSesion(s) {
     const dni = normalizeDni(s?.dni || s?.id);
     if (!isSesionDni(dni)) return false;
-    const ok = write(STORAGE_KEYS.sesion, slimSesion(dni));
+    const ok = write(STORAGE_KEYS.sesion, slimSesion(s));
     idbPutDni(dni);
     return ok;
   },
   async restoreSesion() {
-    let dni = this.getSesionDni();
+    const local = read(STORAGE_KEYS.sesion, null);
+    let dni = normalizeDni(local?.dni || local?.id);
     if (!isSesionDni(dni)) dni = await idbGetDni();
     if (!isSesionDni(dni)) return "";
+    if (local?.emergencia && normalizeDni(local.dni || local.id) === dni) {
+      this.setSesion({
+        dni,
+        emergencia: true,
+        apellido: local.apellido || "",
+        nombre: local.nombre || "",
+      });
+      return dni;
+    }
     this.setSesion({ dni });
     return dni;
   },

@@ -78,7 +78,12 @@ export class FieldScanner {
       if (!text) return;
       const now = Date.now();
       const prev = this.seen.get(text) || 0;
-      if (now - prev < 1400) return;
+      if (now - prev < 2000) return;
+      if (this.seen.size > 80) {
+        for (const [k, t] of this.seen) {
+          if (now - t > 8000) this.seen.delete(k);
+        }
+      }
       this.seen.set(text, now);
       this.lastCode = text;
       this.lastAt = now;

@@ -1,4 +1,4 @@
-const CACHE_NAME = "cocina-qb-v129";
+const CACHE_NAME = "cocina-qb-v138";
 
 const PRECACHE = [
   "./",
@@ -19,11 +19,36 @@ const PRECACHE = [
   "./assets/logo-qberries.png",
 ];
 
+async function putFresh(cache, path) {
+  try {
+    const res = await fetch(path, { cache: "reload" });
+    if (res.ok) await cache.put(path, res);
+  } catch {
+    /* offline */
+  }
+}
+
+async function refreshPrecache() {
+  const cache = await caches.open(CACHE_NAME);
+  await Promise.all(PRECACHE.map((path) => putFresh(cache, path)));
+}
+
+function isAppFile(url) {
+  if (url.origin !== self.location.origin) return false;
+  const p = url.pathname;
+  return (
+    p.endsWith("/") ||
+    p.endsWith(".html") ||
+    p.endsWith(".js") ||
+    p.endsWith(".css") ||
+    p.endsWith(".webmanifest") ||
+    p.includes("/data/")
+  );
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      await Promise.all(PRECACHE.map((url) => cache.add(url).catch(() => null)));
-    }).then(() => self.skipWaiting())
+    refreshPrecache().then(() => self.skipWaiting())
   );
 });
 
@@ -40,14 +65,16 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
 
   const url = new URL(req.url);
-  const isData = url.pathname.includes("/data/");
+  if (url.origin !== self.location.origin) return;
 
-  if (isData) {
+  if (isAppFile(url)) {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(req, copy));
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(req, copy));
+          }
           return res;
         })
         .catch(() => caches.match(req))
@@ -57,7 +84,7 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(
     caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-      if (res.ok && url.origin === location.origin) {
+      if (res.ok) {
         const copy = res.clone();
         caches.open(CACHE_NAME).then((c) => c.put(req, copy));
       }
@@ -72,5 +99,8 @@ self.addEventListener("message", (event) => {
     event.waitUntil(
       caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
     );
+  }
+  if (event.data === "PULL_LATEST") {
+    event.waitUntil(refreshPrecache());
   }
 });
