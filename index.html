@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Solicitud de almuerzo</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icons/icon-192.png" type="image/png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="stylesheet" href="./css/app.css" />
+  <script>
+    (function () {
+      var ua = navigator.userAgent || "";
+      var phone = false;
+      if (/iPad/i.test(ua)) phone = false;
+      else if (/iPhone|iPod/i.test(ua)) phone = true;
+      else if (/Android/i.test(ua) && /Mobile/i.test(ua)) phone = true;
+      else if (navigator.userAgentData && navigator.userAgentData.mobile === true) phone = true;
+      document.documentElement.classList.add(phone ? "is-phone" : "is-desk");
+    })();
+  </script>
+</head>
+<body>
+  <div id="desk-lock" aria-hidden="true">
+    <section class="lock">
+      <div class="welcome-hero">
+        <figure class="welcome-frame">
+          <img src="./assets/entrada.png" alt="" />
+        </figure>
+      </div>
+      <h1>Ábrela en el celular</h1>
+      <p>Esta app es solo para el teléfono. En computadora no se usa.</p>
+    </section>
+  </div>
+  <div id="app"></div>
+  <script>
+    if (location.protocol === "file:") {
+      document.getElementById("app").innerHTML =
+        '<section class="lock">' +
+        '<img src="./assets/logo-qberries.png" alt="Q Berries" />' +
+        "<h1>Ábrela como app</h1>" +
+        "<p>Ábrela con Live Server en el celular. No uses el archivo directo.</p>" +
+        "</section>";
+    }
+  </script>
+  <script src="./js/vendor/jsqr.js"></script>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

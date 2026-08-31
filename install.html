@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#e31b23" />
+  <title>Poner en el celular</title>
+  <link rel="stylesheet" href="./css/app.css" />
+  <script src="./js/vendor/qrcode.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div class="shell">
+      <div class="scroll">
+        <div class="top">
+          <img class="logo" src="./assets/logo-qberries.png" alt="Q Berries" />
+        </div>
+        <p class="hello">En tu celular</p>
+        <p class="sub">Tres toques y queda como una app.</p>
+        <div class="install-qr" id="qr"></div>
+        <div class="card">
+          <h3>Así se pone</h3>
+          <p>1. En Chrome, toca el menú<br>2. Toca “Añadir a pantalla de inicio”<br>3. Abre el ícono y escanea al supervisor</p>
+        </div>
+      </div>
+      <div class="footer">
+        <a class="btn" href="./index.html">Entrar a pedir</a>
+      </div>
+    </div>
+  </div>
+  <script>
+    const url = location.href.replace(/install\.html.*$/i, "index.html");
+    const qr = qrcode(0, "M");
+    qr.addData(url);
+    qr.make();
+    document.getElementById("qr").innerHTML = qr.createSvgTag({ scalable: true, margin: 2 });
+  </script>
+</body>
+</html>

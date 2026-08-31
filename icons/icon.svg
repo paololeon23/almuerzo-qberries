@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Cocina QBerries">
+  <rect width="512" height="512" rx="96" fill="#5c1024"/>
+  <ellipse cx="256" cy="318" rx="148" ry="92" fill="#f3e6d4"/>
+  <path d="M118 300c18 70 86 118 138 118s120-48 138-118" fill="#ead4bc"/>
+  <circle cx="256" cy="168" r="58" fill="#8e1d38"/>
+  <circle cx="232" cy="150" r="16" fill="#c45c6a"/>
+  <path d="M256 118c18-36 52-46 70-40-28 18-34 44-34 44z" fill="#2c5a38"/>
+</svg>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#e31b23" />
+  <title>Códigos — Q Berries</title>
+  <link rel="stylesheet" href="./css/app.css" />
+  <script src="./js/vendor/qrcode.js"></script>
+  <script type="module" src="./js/setup.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div class="shell">
+      <div class="scroll">
+        <div class="top no-print">
+          <img class="logo" src="./assets/logo-qberries.png" alt="Q Berries" />
+          <a class="chip" href="./index.html">App</a>
+        </div>
+        <p class="hello no-print">Códigos</p>
+        <p class="sub no-print">Imprime estos códigos. Solo los supervisores de cosecha pueden pedir almuerzo.</p>
+        <div class="row2 no-print" style="margin-bottom:16px">
+          <button class="btn" id="printBtn" type="button">Imprimir</button>
+          <button class="btn ghost" id="addBtn" type="button">Agregar persona</button>
+        </div>
+        <h2 class="cat">Supervisores</h2>
+        <div class="badge-grid" id="sups"></div>
+        <h2 class="cat">Trabajadores</h2>
+        <div class="badge-grid" id="wrks"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
