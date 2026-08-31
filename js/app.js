@@ -495,81 +495,118 @@ function showPerfilModal() {
   </div>`);
 }
 
-function showUpdatingApp() {
+function showUpdatingVeil() {
   closeFab();
-  openAlert(`<div class="modal-back login-gate update-gate" data-act="stay">
-    <div class="modal login-load update-load" role="dialog" aria-modal="true" data-act="stay">
-      <img class="update-mark" src="./assets/logo-qberries.png" alt="" />
-      <p class="login-kicker">Q BERRIES</p>
-      <h3>Actualizando app</h3>
-      <p>Un momento. Traemos la versión nueva.</p>
-      <div class="login-bar" aria-hidden="true"><i id="update-bar"></i></div>
-      <p class="login-pct" id="update-pct">0%</p>
-    </div>
-  </div>`);
+  try { sessionStorage.setItem("qb_updating", "1"); } catch { /* ignore */ }
+  document.documentElement.classList.add("is-updating");
+  document.documentElement.classList.remove("update-done");
+  const host = document.getElementById("alert-host");
+  if (host) host.innerHTML = "";
+  document.body.classList.remove("modal-open");
+}
+
+function hideUpdatingVeil() {
+  const bar = document.getElementById("update-bar");
+  const pct = document.getElementById("update-pct");
+  if (bar) bar.style.width = "100%";
+  if (pct) pct.textContent = "100%";
+  try { sessionStorage.removeItem("qb_updating"); } catch { /* ignore */ }
+  document.documentElement.classList.add("update-done");
+  window.setTimeout(() => {
+    document.documentElement.classList.remove("is-updating", "update-done");
+  }, 280);
 }
 
 async function wipeAppCache() {
   try {
-    if (navigator.serviceWorker) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map((r) => r.unregister()));
-    }
-  } catch { /* sigue */ }
-  try {
     const keys = await caches.keys();
     await Promise.all(keys.map((k) => caches.delete(k)));
   } catch { /* sigue */ }
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    if (reg) {
+      await reg.update();
+      if (reg.waiting) reg.waiting.postMessage("SKIP_WAITING");
+    }
+  } catch { /* sigue */ }
+}
+
+function versionNewer(local, remote) {
+  const a = String(local || "").split(".").map((n) => Number(n) || 0);
+  const b = String(remote || "").split(".").map((n) => Number(n) || 0);
+  for (let i = 0; i < Math.max(a.length, b.length); i += 1) {
+    if ((b[i] || 0) > (a[i] || 0)) return true;
+    if ((b[i] || 0) < (a[i] || 0)) return false;
+  }
+  return false;
+}
+
+async function detectAppUpdate() {
+  let remote = {};
+  try {
+    const res = await fetch("./data/config.json", { cache: "no-store" });
+    remote = await res.json();
+  } catch { /* sin red */ }
+  let waiting = false;
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    if (reg) {
+      await Promise.race([reg.update(), new Promise((r) => setTimeout(r, 600))]);
+      waiting = !!(reg.waiting || reg.installing);
+    }
+  } catch { /* sin sw */ }
+  const latest = String(remote.version || "").trim();
+  return {
+    latest,
+    newer: versionNewer(APP_VERSION, latest) || waiting,
+  };
 }
 
 async function runAppUpdate() {
-  showUpdatingApp();
-  speak("Actualizando app");
+  showUpdatingVeil();
   const bar = document.getElementById("update-bar");
   const pct = document.getElementById("update-pct");
-  const start = performance.now();
-  const dur = 2200;
-  let done = false;
-  const tick = (now) => {
-    const t = Math.min(1, (now - start) / dur);
-    const p = Math.round((1 - (1 - t) ** 3) * 100);
-    if (bar) bar.style.width = `${p}%`;
-    if (pct) pct.textContent = `${p}%`;
-    if (t < 1) {
-      requestAnimationFrame(tick);
-      return;
-    }
-    done = true;
-  };
-  requestAnimationFrame(tick);
-  await flushQueue().catch(() => {});
+  if (bar) bar.style.width = "80%";
+  if (pct) pct.textContent = "80%";
+  speak("Actualizando app");
+  await Promise.race([flushQueue().catch(() => {}), new Promise((r) => setTimeout(r, 300))]);
   await wipeAppCache();
-  const wait = () => {
-    if (!done) {
-      window.setTimeout(wait, 80);
-      return;
-    }
-    if (bar) bar.style.width = "100%";
-    if (pct) pct.textContent = "100%";
-    const url = new URL(location.href);
-    url.searchParams.set("v", String(Date.now()));
-    window.setTimeout(() => { location.replace(url.toString()); }, 280);
-  };
-  wait();
+  if (bar) bar.style.width = "100%";
+  if (pct) pct.textContent = "100%";
+  location.reload();
 }
 
 function showUpdateModal() {
   closeFab();
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
-      ${sectionHead("Actualizar", "Caché y versión de la app.")}
-      <p class="app-ver">Versión ${esc(APP_VERSION)}</p>
+      ${sectionHead("Actualizar", "Revisa si hay una versión nueva.")}
+      <p class="app-ver" id="update-ver">Versión ${esc(APP_VERSION)}</p>
+      <p class="update-status" id="update-status">Buscando actualización…</p>
       <div class="update-actions">
         <button class="btn ghost" data-act="clear-cache" type="button">Borrar caché</button>
         <button class="btn leaf" data-act="reload-app" type="button">Actualizar app</button>
       </div>
     </div>
   </div>`);
+  detectAppUpdate().then((info) => {
+    const status = document.getElementById("update-status");
+    const ver = document.getElementById("update-ver");
+    if (!status) return;
+    if (info.newer) {
+      status.textContent = info.latest
+        ? `Hay una nueva: ${info.latest}. Pulse Actualizar app.`
+        : "Hay una actualización. Pulse Actualizar app.";
+      status.classList.add("new");
+      if (ver && info.latest) ver.textContent = `Esta app ${APP_VERSION} · Nueva ${info.latest}`;
+    } else {
+      status.textContent = "Ya está al día. Igual puede actualizar.";
+      status.classList.add("ok");
+    }
+  }).catch(() => {
+    const status = document.getElementById("update-status");
+    if (status) status.textContent = "Sin red. Pulse Actualizar app igual.";
+  });
 }
 
 function rememberDni(person) {
@@ -1664,16 +1701,28 @@ async function handleOneScan(raw) {
       ok: false,
       note: "Ese DNI no está en trabajadores. Use el ícono si es temporal.",
     });
-    speak("No está en la lista.");
+    speak("No está en la lista.", { flush: true });
     return;
   }
-  const { already } = await registerPerson(worker);
+  if (getMesa().some((p) => p.id === worker.dni)) {
+    const ap = twoApellidos(worker) || worker.apellido || "";
+    showScanHit({
+      dni: worker.dni,
+      nombre: ap,
+      cargo: [nameParts(worker).nombre, worker.cargo].filter(Boolean).join(" · "),
+      ok: false,
+      note: "Ya está en la lista. Intenta con otro trabajador.",
+    });
+    speak("Ya está en la lista. Intenta con otro trabajador.", { flush: true });
+    return;
+  }
+  await registerPerson(worker);
   showScanHit({
     dni: worker.dni,
     nombre: twoApellidos(worker),
     cargo: [nameParts(worker).nombre, worker.cargo].filter(Boolean).join(" · "),
     ok: true,
-    note: already ? "Ya está en el resumen." : "Registrado. Siguiente.",
+    note: "Registrado. Siguiente.",
   });
   refreshMesaUi();
 }
@@ -2254,6 +2303,9 @@ async function boot() {
 
   await store.restoreSesion();
   const hash = viewFromHash();
+  const wasUpdating = (() => {
+    try { return sessionStorage.getItem("qb_updating") === "1"; } catch { return false; }
+  })();
   if (supervisor()) {
     store.setSesion(supervisor());
     const next = hash && hash !== "welcome" && hash !== "lock" && hash !== "supervisor" ? hash : "home";
@@ -2261,8 +2313,9 @@ async function boot() {
     flushQueue().then(() => refreshPendPill());
   } else {
     show(hash === "supervisor" ? "supervisor" : "welcome", { replace: true });
-    if (state.view === "welcome") speak("Bienvenido a Cocina Q Berries");
+    if (state.view === "welcome" && !wasUpdating) speak("Bienvenido a Cocina Q Berries");
   }
+  if (wasUpdating) hideUpdatingVeil();
 }
 
 function enterApp() {

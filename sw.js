@@ -1,4 +1,4 @@
-const CACHE_NAME = "cocina-qb-v125";
+const CACHE_NAME = "cocina-qb-v129";
 
 const PRECACHE = [
   "./",
@@ -67,6 +67,7 @@ self.addEventListener("fetch", (event) => {
 });
 
 self.addEventListener("message", (event) => {
+  if (event.data === "SKIP_WAITING") self.skipWaiting();
   if (event.data === "CLEAR_APP_CACHE") {
     event.waitUntil(
       caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))

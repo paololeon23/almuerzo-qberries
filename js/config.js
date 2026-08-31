@@ -1,5 +1,5 @@
-export const APP_VERSION = "1.0.1";
-export const CACHE_NAME = "cocina-qb-v125";
+export const APP_VERSION = "1.0.2";
+export const CACHE_NAME = "cocina-qb-v129";
 export const TZ = "America/Lima";
 export const HISTORY_TTL_MS = 48 * 60 * 60 * 1000;
 

@@ -1429,8 +1429,26 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   width: min(100%, 360px);
   background: #fff;
   border-radius: 24px;
-  padding: 22px 20px 18px;
+  padding: 24px 22px 20px;
   box-shadow: 0 24px 50px rgba(27, 48, 34, 0.18);
+}
+.modal .footer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.modal .footer-actions .btn {
+  width: 100%;
+  max-width: none;
+  min-height: 48px;
+  margin: 0;
+  border-radius: 14px;
 }
 .modal-ico {
   width: 44px;
@@ -1689,9 +1707,7 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   color: #94a3b8;
 }
 .summary-modal .footer-actions {
-  margin-top: 10px;
-  padding: 12px 0 0;
-  box-shadow: none;
+  margin-top: 16px;
 }
 .update-actions {
   display: grid;
@@ -1711,6 +1727,15 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   font-weight: 650;
   color: #94a3b8;
 }
+.update-status {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #64748b;
+}
+.update-status.new { color: #c2410c; }
+.update-status.ok { color: #1f3d2a; }
 .fab-wrap {
   position: fixed;
   right: 16px;

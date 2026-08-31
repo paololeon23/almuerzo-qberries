@@ -14,8 +14,47 @@
   <link rel="icon" href="./assets/logo-qberries.png" type="image/png" />
   <link rel="apple-touch-icon" href="./icons/icon-192.png" />
   <link rel="stylesheet" href="./css/app.css" />
+  <style>
+    #update-veil {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: #fff;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      text-align: center;
+    }
+    html.is-updating #update-veil { display: flex; }
+    html.is-updating, html.is-updating body { background: #fff; }
+    #update-veil .login-kicker { margin: 0 0 8px; color: #dc2626; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; }
+    #update-veil h3 { margin: 0 0 6px; font-size: 22px; }
+    #update-veil > p { margin: 0 0 20px; color: #6f6f6f; font-size: 15px; }
+    #update-veil .login-bar { width: min(240px, 72vw); height: 10px; border-radius: 99px; background: #eef2ef; overflow: hidden; }
+    #update-veil .login-bar > i { display: block; height: 100%; width: 18%; border-radius: 99px; background: #1f3d2a; }
+    #update-veil .login-pct { margin: 12px 0 0; font-size: 13px; font-weight: 800; color: #1f3d2a; }
+    #update-veil .update-mark { width: 56px; height: auto; margin: 0 auto 10px; }
+    html.update-done #update-veil { opacity: 0; transition: opacity 0.25s ease; }
+  </style>
+  <script>
+    try {
+      if (sessionStorage.getItem("qb_updating") === "1") {
+        document.documentElement.classList.add("is-updating");
+      }
+    } catch (e) {}
+  </script>
 </head>
 <body>
+  <div id="update-veil" aria-hidden="true">
+    <img class="update-mark" src="./assets/logo-qberries.png" alt="" />
+    <p class="login-kicker">Q BERRIES</p>
+    <h3>Actualizando app</h3>
+    <p>Un momento. Traemos la versión nueva.</p>
+    <div class="login-bar"><i id="update-bar"></i></div>
+    <p class="login-pct" id="update-pct">0%</p>
+  </div>
   <div id="app"></div>
   <script>
     if (location.protocol === "file:") {
