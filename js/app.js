@@ -736,7 +736,11 @@ function loteCard() {
 }
 
 function comedores() {
-  return Array.from({ length: 10 }, (_, i) => `Comedor ${i + 1}`);
+  return [
+    ...Array.from({ length: 11 }, (_, i) => `Comedor ${i + 1}`),
+    "Garita 2",
+    "Galpon",
+  ];
 }
 
 function currentComedor() {
@@ -902,16 +906,11 @@ function showSummaryModal() {
   const mesa = getMesa();
   const meal = currentLote();
   const n = mesa.length;
-  const loteOpts = campoLotes().map((row) => [
-    row.codLote,
-    loteOptionLabel(row),
-    `lote ${row.lote || ""} l${row.lote || ""} ${row.codLote || ""} ${row.modulo || ""} t${row.turno || ""} ${row.variedad || ""}`,
-  ]);
   const comedorOpts = comedores().map((name) => [name, name, `comedor ${name}`]);
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
       <div class="summary-top">
-        ${sectionHead("Solicitud de almuerzo", state.extraOn ? "Entra como extra (se olvidó o llegó tarde). Va a Comidas extras." : "Confirme lote y comedor antes de enviar.")}
+        ${sectionHead("Solicitud de almuerzo", state.extraOn ? "Entra como extra (se olvidó o llegó tarde). Va a Comidas extras." : "Confirme el comedor antes de enviar.")}
         ${netFlag()}
       </div>
       <div class="summary-stat">
@@ -920,10 +919,6 @@ function showSummaryModal() {
       </div>
       <p class="summary-auth"><span>Autoriza</span><strong>${esc(authLabel())}</strong></p>
       <div class="summary-fields">
-        <div class="pick-field">
-          <p class="pick-label">Lote</p>
-          ${pickSelect("sel-lote", currentCampoLote(), loteOpts, "Buscar lote")}
-        </div>
         <div class="pick-field">
           <p class="pick-label">Comedor</p>
           ${pickSelect("sel-comedor", currentComedor(), comedorOpts, "Buscar comedor")}
@@ -1611,7 +1606,8 @@ async function registerPerson(worker, { silent = false } = {}) {
   store.touchReciente({ ...worker, kind: "wrk" });
   rememberDni(worker);
   state.mesaPage = 1;
-  if (!silent) speakApellido(twoApellidos(worker));
+  const ap = twoApellidos(worker) || worker.apellido || "";
+  if (!silent) speakApellido(ap);
   refreshPendPill();
   return { result: { status: "lista" }, already: !!onMesa };
 }
@@ -1827,7 +1823,7 @@ async function onClick(e) {
     return;
   }
   if (act === "dismiss-alert") { dismissAlert(); return; }
-  if (act === "start-cam") { startCamHere(); return; }
+  if (act === "start-cam") { unlockVoice(); startCamHere(); return; }
   if (act === "stop-cam") { scanner.stop(); return; }
   if (act === "enter") { enterApp(); return; }
   if (act === "install-app") { installApp(); return; }
@@ -1923,13 +1919,13 @@ async function onClick(e) {
     for (const id of ids) {
       const worker = personFromSaved(id);
       if (!worker) continue;
-      const { already } = await registerPerson(worker, { silent: true });
+      const { already } = await registerPerson(worker);
       if (!already) added += 1;
     }
     refreshMesaUi();
     dismissAlert();
     const n = added || ids.length;
-    speak(added ? `Se agregaron ${n} a la lista` : "Ya estaban en la lista");
+    if (!added) speak("Ya estaban en la lista", { flush: true });
     return;
   }
   if (act === "use-saved-dni") {
@@ -2029,7 +2025,6 @@ async function onClick(e) {
     const pick = btn.dataset.pick;
     const id = btn.dataset.id;
     const lab = btn.dataset.label || btn.textContent.trim();
-    if (pick === "sel-lote") store.setPrefs({ campoLote: id });
     if (pick === "sel-comedor") store.setPrefs({ comedor: id });
     const wrap = btn.closest(".pick");
     if (wrap) {
