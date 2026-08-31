@@ -495,16 +495,79 @@ function showPerfilModal() {
   </div>`);
 }
 
+function showUpdatingApp() {
+  closeFab();
+  openAlert(`<div class="modal-back login-gate update-gate" data-act="stay">
+    <div class="modal login-load update-load" role="dialog" aria-modal="true" data-act="stay">
+      <img class="update-mark" src="./assets/logo-qberries.png" alt="" />
+      <p class="login-kicker">Q BERRIES</p>
+      <h3>Actualizando app</h3>
+      <p>Un momento. Traemos la versión nueva.</p>
+      <div class="login-bar" aria-hidden="true"><i id="update-bar"></i></div>
+      <p class="login-pct" id="update-pct">0%</p>
+    </div>
+  </div>`);
+}
+
+async function wipeAppCache() {
+  try {
+    if (navigator.serviceWorker) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+  } catch { /* sigue */ }
+  try {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => caches.delete(k)));
+  } catch { /* sigue */ }
+}
+
+async function runAppUpdate() {
+  showUpdatingApp();
+  speak("Actualizando app");
+  const bar = document.getElementById("update-bar");
+  const pct = document.getElementById("update-pct");
+  const start = performance.now();
+  const dur = 2200;
+  let done = false;
+  const tick = (now) => {
+    const t = Math.min(1, (now - start) / dur);
+    const p = Math.round((1 - (1 - t) ** 3) * 100);
+    if (bar) bar.style.width = `${p}%`;
+    if (pct) pct.textContent = `${p}%`;
+    if (t < 1) {
+      requestAnimationFrame(tick);
+      return;
+    }
+    done = true;
+  };
+  requestAnimationFrame(tick);
+  await flushQueue().catch(() => {});
+  await wipeAppCache();
+  const wait = () => {
+    if (!done) {
+      window.setTimeout(wait, 80);
+      return;
+    }
+    if (bar) bar.style.width = "100%";
+    if (pct) pct.textContent = "100%";
+    const url = new URL(location.href);
+    url.searchParams.set("v", String(Date.now()));
+    window.setTimeout(() => { location.replace(url.toString()); }, 280);
+  };
+  wait();
+}
+
 function showUpdateModal() {
   closeFab();
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
       ${sectionHead("Actualizar", "Caché y versión de la app.")}
+      <p class="app-ver">Versión ${esc(APP_VERSION)}</p>
       <div class="update-actions">
         <button class="btn ghost" data-act="clear-cache" type="button">Borrar caché</button>
         <button class="btn leaf" data-act="reload-app" type="button">Actualizar app</button>
       </div>
-      <p class="app-ver">Versión ${esc(APP_VERSION)}</p>
     </div>
   </div>`);
 }
@@ -1886,9 +1949,7 @@ async function onClick(e) {
   if (act === "go-perfil") { showPerfilModal(); return; }
   if (act === "do-update") { showUpdateModal(); return; }
   if (act === "reload-app") {
-    dismissAlert();
-    speak("Actualizando");
-    flushQueue().finally(() => window.location.reload());
+    runAppUpdate();
     return;
   }
   if (act === "add-temp-person") {

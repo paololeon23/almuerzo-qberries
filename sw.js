@@ -1,4 +1,4 @@
-const CACHE_NAME = "cocina-qb-v119";
+const CACHE_NAME = "cocina-qb-v121";
 
 const PRECACHE = [
   "./",

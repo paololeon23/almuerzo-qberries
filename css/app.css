@@ -1496,6 +1496,11 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
 }
+.update-load .update-mark {
+  width: 56px;
+  height: auto;
+  margin: 0 auto 10px;
+  display: block;
 }
 .summary-modal {
   position: relative;
