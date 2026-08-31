@@ -91,6 +91,8 @@ const state = {
   workers: [],
   oficial: new Map(),
   supByDni: new Map(),
+  wrkByDni: new Map(),
+  workersPromise: null,
   supervisors: [],
   scanQueue: [],
   scanMode: "sup",
@@ -175,10 +177,32 @@ function mergePeople(fileList, localList) {
   return [...map.values()];
 }
 
-function findOfficial(dni) {
+function findWorkerByDni(dni) {
   const key = normalizeDni(dni);
   if (!key) return null;
-  return state.supByDni.get(key) || null;
+  return state.wrkByDni.get(key) || state.supByDni.get(key) || null;
+}
+
+function findOfficial(dni) {
+  return findWorkerByDni(dni);
+}
+
+async function loadTrabajadores() {
+  const raw = await loadJson("./data/trabajadores.json", []);
+  const list = Array.isArray(raw) ? raw : (raw.trabajadores || []);
+  const map = new Map();
+  for (const row of list) {
+    const person = mapTrabajador(row);
+    if (person.dni) map.set(person.dni, person);
+  }
+  state.wrkByDni = map;
+  state.workers = [...map.values()];
+  state.oficial = map;
+}
+
+function ensureWorkers() {
+  if (!state.workersPromise) state.workersPromise = loadTrabajadores();
+  return state.workersPromise;
 }
 
 function personFromSaved(dni) {
@@ -216,7 +240,7 @@ function findSupervisor(parsed) {
 function supervisor() {
   const dni = store.getSesionDni();
   if (!dni) return null;
-  const hit = findOfficial(dni);
+  const hit = state.supByDni.get(dni);
   if (hit) return { ...hit, apellido: twoApellidos(hit) };
   if (!state.supByDni.size) {
     return { id: dni, dni, apellido: "", nombre: "", cargo: "" };
@@ -317,13 +341,12 @@ function dropScanCola() {
   }
 }
 
-const LOTES = ["Desayuno", "Almuerzo", "Cena"];
+const LOTES = ["Almuerzo"];
 const PAGE_SIZE = 8;
 const HIST_PAGE_SIZE = 5;
 
 function currentLote() {
-  const saved = store.getPrefs().lote;
-  return LOTES.includes(saved) ? saved : "Almuerzo";
+  return "Almuerzo";
 }
 
 function sameMealSend(r, comida) {
@@ -631,21 +654,20 @@ function footer(active, extra = "") {
 }
 
 function lotePills() {
-  const cur = currentLote();
+  const extra = !!state.extraOn;
   return `<div class="lote-pills" role="group" aria-label="Lote">
-    ${LOTES.map((name) => `<button type="button" class="${cur === name ? "on" : ""}" data-act="set-lote" data-id="${esc(name)}">${esc(name)}</button>`).join("")}
+    <button type="button" class="${extra ? "" : "on"}" data-act="set-lote" data-id="Almuerzo">Almuerzo</button>
+    <button type="button" class="extra${extra ? " on" : ""}" data-act="toggle-extra">Extra</button>
   </div>`;
 }
 
 function loteCard() {
   const locked = isSendLocked();
   const extra = !!state.extraOn;
-  const showExtra = extra || hasSavedSend();
   return `<section class="section-card">
-    ${showExtra ? `<button type="button" class="extra-btn${extra ? " on" : ""}" data-act="toggle-extra">Extra</button>` : ""}
     ${extra ? `<p class="extra-note">Modo extra activo. Se olvidó o llegó tarde. Va a Comidas extras.</p>` : ""}
-    ${locked ? `<p class="extra-note">Ya envió ${currentLote().toLowerCase()} hoy. Todo está bloqueado. Pulse Extra para olvidados o tardanzas.</p>` : ""}
-    ${sectionHead("Lote del turno", extra ? "Escanee solo a quien falta. Entra como extra." : "Elija el lote. Después presente el QR de cada persona.")}
+    ${locked ? `<p class="extra-note">Ya envió el almuerzo hoy. Todo está bloqueado. Pulse Extra para olvidados o tardanzas.</p>` : ""}
+    ${sectionHead("Lote del turno", extra ? "Escanee solo a quien falta. Entra como extra." : "Almuerzo o Extra. Después presente el QR de cada persona.")}
     ${lotePills()}
   </section>`;
 }
@@ -1121,6 +1143,7 @@ function showLoginGate(person) {
   state.loggingIn = true;
   scanner.stop();
   store.setSesion(person);
+  ensureWorkers();
   speak(`Bienvenido ${ap}`);
   openAlert(`<div class="modal-back login-gate" data-act="stay">
     <div class="modal login-load" role="dialog" aria-modal="true" data-act="stay">
@@ -1357,7 +1380,7 @@ function moreView() {
 function workerRows(query) {
   const q = (query || "").trim().toUpperCase();
   const rec = store.getRecientes();
-  const all = [...rec, ...state.supervisors].filter((p, i, a) => a.findIndex((x) => x.id === p.id) === i);
+  const all = [...rec, ...state.workers].filter((p, i, a) => a.findIndex((x) => x.id === p.id) === i);
   const filtered = q
     ? all.filter((w) => `${w.apellido} ${w.nombre} ${w.nombreCompleto || ""} ${w.dni || w.id}`.toUpperCase().includes(q)).slice(0, 40)
     : rec.slice(0, 20);
@@ -1572,16 +1595,17 @@ async function handleOneScan(raw) {
     warnLocked();
     return;
   }
-  const worker = findSupervisor(parsed);
+  await ensureWorkers();
+  const worker = findWorkerByDni(dni);
   if (!worker) {
     showScanHit({
       dni,
-      nombre: "No autorizado",
-      cargo: "Solo supervisores piden almuerzo",
+      nombre: "No está en la lista",
+      cargo: "No figura en trabajadores",
       ok: false,
-      note: "Ese DNI no está en supervisores de cosecha.",
+      note: "Ese DNI no está en trabajadores. Use el ícono si es temporal.",
     });
-    speak("No autorizado. Solo supervisores piden almuerzo.");
+    speak("No está en la lista.");
     return;
   }
   const { already } = await registerPerson(worker);
@@ -1590,7 +1614,7 @@ async function handleOneScan(raw) {
     nombre: twoApellidos(worker),
     cargo: [nameParts(worker).nombre, worker.cargo].filter(Boolean).join(" · "),
     ok: true,
-    note: already ? "Ya está en el resumen." : "Registrado. Siguiente supervisor.",
+    note: already ? "Ya está en el resumen." : "Registrado. Siguiente.",
   });
   refreshMesaUi();
 }
@@ -1959,20 +1983,15 @@ async function onClick(e) {
     return;
   }
   if (act === "set-lote") {
-    const name = btn.dataset.id;
-    if (!LOTES.includes(name)) return;
-    store.setPrefs({ lote: name });
+    store.setPrefs({ lote: "Almuerzo" });
+    if (state.extraOn) {
+      toggleExtra();
+      return;
+    }
     if (document.querySelector(".summary-modal")) {
       showSummaryModal();
       return;
     }
-    if (state.extraOn) {
-      document.querySelectorAll(".lote-pills:not(.comedor-pills) button").forEach((b) => {
-        b.classList.toggle("on", b.dataset.id === name);
-      });
-      return;
-    }
-    if (state.view === "home") show("home", { silent: true });
     return;
   }
   if (act === "set-comedor") {
@@ -2063,7 +2082,7 @@ async function onClick(e) {
     const oficial = findOfficial(person.id);
     if (!oficial) {
       document.getElementById("fId")?.classList.add("bad");
-      showAlert("No está en la lista", "Solo supervisores de cosecha pueden pedir almuerzo.");
+      showAlert("No está en la lista", "Ese DNI no está en trabajadores.");
       return;
     }
     registerPerson(oficial).then(() => show("home"));
@@ -2172,9 +2191,10 @@ async function boot() {
   }
   state.supervisors = [...state.supByDni.values()];
   state.oficial = state.supByDni;
-  state.workers = state.supervisors;
+  state.workers = [];
   if (cfg.appsScriptUrl) store.setScriptUrl(cfg.appsScriptUrl);
   dropScanCola();
+  ensureWorkers();
 
   await store.restoreSesion();
   const hash = viewFromHash();

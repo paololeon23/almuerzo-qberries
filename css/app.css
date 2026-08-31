@@ -260,12 +260,22 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
 }
 .lote-pills {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 4px;
   margin: 16px 0 0;
   padding: 4px;
   background: #f1f5f9;
   border-radius: 14px;
+}
+.lote-pills.comedor-pills {
+  grid-template-columns: repeat(2, 1fr);
+}
+.lote-pills button.extra {
+  color: var(--red);
+}
+.lote-pills button.extra.on {
+  background: var(--red);
+  color: #fff;
 }
 .section-card .lote-pills { margin-top: 0; }
 .extra-btn {
