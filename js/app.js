@@ -1,9 +1,9 @@
 import { APP_VERSION, APP_ASSETS, FORM_TYPES, TZ, encodeQr, parseQr, normalizeDni, isSesionDni, todayKey, uuid, nowParts } from "./config.js";
-import { bindAppHeight, preventBounce } from "./device.js";
+import { bindAppHeight, bindFieldLock, isFieldDevice, preventBounce } from "./device.js";
 import { recordsOfToday, store } from "./store.js";
 import { onVoiceState, setVoiceEnabled, speak, speakApellido, unlockVoice, voiceEnabled } from "./voice.js";
 import { computeHeadcount } from "./calc.js";
-import { flushQueue, pingServer, saveAndSync } from "./sync.js";
+import { checkTurno, flushQueue, pingServer, saveAndSync } from "./sync.js";
 import { FieldScanner } from "./scanner.js";
 
 const scanner = new FieldScanner();
@@ -111,6 +111,9 @@ const state = {
   dniQuery: "",
   dniSelected: {},
   histPage: 1,
+  histOpen: "",
+  histPeoplePage: 1,
+  histPeopleQuery: "",
   lotes: [],
   swGuardUntil: 0,
 };
@@ -366,6 +369,7 @@ function dropScanCola() {
 const LOTES = ["Almuerzo"];
 const PAGE_SIZE = 8;
 const HIST_PAGE_SIZE = 5;
+const HIST_PEOPLE_PAGE = 10;
 
 function currentLote() {
   return "Almuerzo";
@@ -381,15 +385,53 @@ function sameMealSend(r, comida) {
   return true;
 }
 
-function hasNormalSend(comida = currentLote()) {
-  const hit = (r) => (r.type === "lista") && !r.payload?.extra && sameMealSend(r, comida);
-  return store.getHistorial().some(hit) || store.getCola().some(hit);
-}
-
-function hasSavedSend(comida = currentLote()) {
+function dayAlreadySent(comida = currentLote()) {
+  const t = store.getTurnoDia();
+  if (t?.enviado && (!t.comida || t.comida === comida)) return true;
   return store.getHistorial().some((r) => (
     r.type === "lista" && !r.payload?.extra && r.confirmed !== false && sameMealSend(r, comida)
   ));
+}
+
+function hasNormalSend(comida = currentLote()) {
+  if (dayAlreadySent(comida)) return true;
+  return store.getCola().some((r) => (r.type === "lista") && !r.payload?.extra && sameMealSend(r, comida));
+}
+
+function hasSavedSend(comida = currentLote()) {
+  return dayAlreadySent(comida);
+}
+
+async function syncTurnoDelDia({ timeoutMs = 2800 } = {}) {
+  const s = supervisor();
+  const sid = normalizeDni(s?.dni || s?.id);
+  if (!sid) return store.getTurnoDia();
+  const run = (async () => {
+    if (!navigator.onLine) return store.getTurnoDia();
+    const r = await checkTurno({
+      supervisorId: sid,
+      fecha: todayKey(TZ),
+      comida: currentLote(),
+    });
+    if (!r?.ok) return store.getTurnoDia();
+    store.setTurnoDia({
+      dni: sid,
+      fecha: r.fecha || todayKey(TZ),
+      comida: r.comida || currentLote(),
+      enviado: !!r.enviado,
+    });
+    refreshHomeLock();
+    return store.getTurnoDia();
+  })();
+  if (!timeoutMs) return run;
+  return Promise.race([
+    run,
+    new Promise((resolve) => window.setTimeout(() => resolve(store.getTurnoDia()), timeoutMs)),
+  ]);
+}
+
+function refreshHomeLock() {
+  if (state.view === "home") show("home", { replace: true, silent: true });
 }
 
 function isSendLocked() {
@@ -457,15 +499,55 @@ function horaMinutos(raw) {
 }
 
 function historialConfirmados() {
-  const day = todayKey(TZ);
   const sid = supervisor()?.dni || supervisor()?.id || "";
   return store.getHistorial().filter((r) => {
     if (r.type !== "lista" && r.type !== "extra") return false;
     if (r.confirmed === false) return false;
-    if (r.payload?.fecha_local !== day) return false;
     if (sid && r.payload?.supervisor_id && r.payload.supervisor_id !== sid) return false;
     return true;
   });
+}
+
+function histRecordId(r) {
+  return String(r.clientId || r.savedAt || "");
+}
+
+function histPersonas(r) {
+  return (r.payload?.personas || []).filter((p) => p && (p.dni || p.id));
+}
+
+function histPeopleFiltered(r) {
+  const q = String(state.histPeopleQuery || "").replace(/\D/g, "");
+  return histPersonas(r).filter((p) => {
+    if (!q) return true;
+    return String(p.dni || p.id || "").includes(q);
+  });
+}
+
+function histPeopleBlock(r) {
+  const all = histPeopleFiltered(r);
+  const pages = Math.max(1, Math.ceil(all.length / HIST_PEOPLE_PAGE));
+  state.histPeoplePage = Math.min(Math.max(1, state.histPeoplePage || 1), pages);
+  const start = (state.histPeoplePage - 1) * HIST_PEOPLE_PAGE;
+  const slice = all.slice(start, start + HIST_PEOPLE_PAGE);
+  const q = String(state.histPeopleQuery || "").replace(/\D/g, "");
+  const rows = slice.map((p) => {
+    const dni = p.dni || p.id || "—";
+    const ape = twoApellidos(p) || p.apellido || "—";
+    const nom = nameParts(p).nombre || p.nombre || "";
+    return `<div class="hist-person">
+      <div>
+        <b>${esc(ape)}</b>
+        <div class="meta">DNI ${esc(dni)}${nom ? ` · ${esc(nom)}` : ""}</div>
+      </div>
+      <span class="st ok">Enviado</span>
+    </div>`;
+  }).join("") || `<p class="sub">${q ? "Ningún DNI coincide." : "No hay personas de este envío en el celular."}</p>`;
+  return `<div class="hist-people">
+    <input id="hist-search" class="dni-search" type="search" inputmode="numeric" maxlength="8" enterkeyhint="search" autocomplete="off" placeholder="Buscar DNI" value="${esc(q)}">
+    <div class="hist-people-list">${rows}</div>
+    ${pagerHtml(state.histPeoplePage, pages, "hist-people-prev", "hist-people-next")}
+  </div>`;
 }
 
 function showHistorialModal() {
@@ -475,28 +557,49 @@ function showHistorialModal() {
   state.histPage = Math.min(Math.max(1, state.histPage || 1), pages);
   const start = (state.histPage - 1) * HIST_PAGE_SIZE;
   const slice = recs.slice(start, start + HIST_PAGE_SIZE);
+  const openId = state.histOpen || "";
+  if (openId && !slice.some((r) => histRecordId(r) === openId)) state.histOpen = "";
+  const today = todayKey(TZ);
   const rows = slice.map((r) => {
     const p = r.payload || {};
-    const n = p.trabajadores_unicos || (p.personas || []).length;
+    const n = p.trabajadores_unicos || histPersonas(r).length;
     const who = `${n || "—"} ${n === 1 ? "solicitud" : "solicitudes"}`;
     const hora = horaMinutos(p.hora_local);
-    const meta = [p.etapa || "—", p.comedor || "—", hora].filter(Boolean).join(" · ");
-    return `<div class="hist-row">
-      <div>
-        <b>${esc(who)}</b>
-        <div class="meta">${esc(meta)}</div>
-      </div>
-      <span class="st ok">${r.type === "extra" || r.payload?.extra ? "Extra" : (r.duplicate ? "Ya estaba" : "Confirmado")}</span>
+    const fecha = p.fecha_local && p.fecha_local !== today
+      ? String(p.fecha_local).slice(5).replace("-", "/")
+      : "";
+    const meta = [p.etapa || "—", p.comedor || "—", fecha, hora].filter(Boolean).join(" · ");
+    const id = histRecordId(r);
+    const open = openId === id;
+    const badge = r.type === "extra" || p.extra ? "Extra" : (r.duplicate ? "Ya estaba" : "Confirmado");
+    return `<div class="hist-item${open ? " open" : ""}">
+      <button type="button" class="hist-row" data-act="toggle-hist" data-id="${esc(id)}" aria-expanded="${open ? "true" : "false"}">
+        <div>
+          <b>${esc(who)}</b>
+          <div class="meta">${esc(meta)}</div>
+        </div>
+        <span class="st ok">${esc(badge)}</span>
+        <span class="hist-chev" aria-hidden="true">${open ? "▾" : "▸"}</span>
+      </button>
+      ${open ? histPeopleBlock(r) : ""}
     </div>`;
   }).join("") || `<p class="sub">Aún no hay envíos confirmados en este celular.</p>`;
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
-      ${sectionHead("Historial", "Solo este celular. Aparece cuando el servidor confirma el guardado.")}
+      ${sectionHead("Historial", "Solo este celular. Se borra a las 48 horas.")}
       <div class="hist-list">${rows}</div>
       ${pagerHtml(state.histPage, pages, "hist-page-prev", "hist-page-next")}
       <button class="btn ghost" data-act="dismiss-alert" type="button">Cerrar</button>
     </div>
   </div>`);
+}
+
+function focusHistSearch() {
+  const input = document.getElementById("hist-search");
+  if (!input) return;
+  input.focus();
+  const n = input.value.length;
+  input.setSelectionRange(n, n);
 }
 
 function showPerfilModal() {
@@ -867,6 +970,7 @@ function loteCard() {
   return `<section class="section-card">
     ${extra ? `<p class="extra-note">Modo extra activo. Se olvidó o llegó tarde. Va a Comidas extras.</p>` : ""}
     ${locked ? `<p class="extra-note">Ya envió el almuerzo hoy. Todo está bloqueado. Pulse Extra para olvidados o tardanzas.</p>` : ""}
+    ${!locked && !extra && !navigator.onLine ? `<p class="extra-note">Sin señal. Puede escanear y enviar. Queda pendiente en este celular hasta tener internet.</p>` : ""}
     ${sectionHead("Lote del turno", extra ? "Escanee solo a quien falta. Entra como extra." : "Almuerzo o Extra. Después presente el QR de cada persona.")}
     ${lotePills()}
   </section>`;
@@ -875,8 +979,10 @@ function loteCard() {
 function comedores() {
   return [
     ...Array.from({ length: 11 }, (_, i) => `Comedor ${i + 1}`),
+    "Garita 1",
     "Garita 2",
     "Galpon",
+    "Comedor Administrativo",
   ];
 }
 
@@ -988,6 +1094,13 @@ function onPickInput(e) {
       const n = input.value.length;
       input.setSelectionRange(n, n);
     }
+    return;
+  }
+  if (e.target.id === "hist-search") {
+    state.histPeopleQuery = e.target.value.replace(/\D/g, "").slice(0, 8);
+    state.histPeoplePage = 1;
+    showHistorialModal();
+    focusHistSearch();
     return;
   }
   if (!e.target.classList.contains("pick-search")) return;
@@ -1365,6 +1478,7 @@ function supervisorView() {
         <div class="scan-head">
           ${sectionHead("Permiso", emerg ? "Rojo activo. Escanea tu QR. Puede entrar cualquiera." : "Verde: solo supervisores autorizados. Escanee su QR.")}
         </div>
+        ${!navigator.onLine ? `<p class="extra-note">Se necesita señal para iniciar sesión. Así se sabe si este supervisor ya envió hoy.</p>` : ""}
         <p class="access-tag ${emerg ? "red" : "green"}" id="access-tag">${emerg ? "Cualquier persona" : "Solo supervisores"}</p>
         ${scanBox()}
         <p class="scan-live" id="scan-live">${emerg ? "Escanea tu QR. Cualquier persona puede entrar." : "Toca Activar cámara QR."}</p>
@@ -1444,10 +1558,29 @@ function scanHitBox() {
   return `<article class="hit-card" id="scan-hit" hidden></article>`;
 }
 
+function abortLogin(title, text) {
+  state.loggingIn = false;
+  store.clearSesion();
+  store.clearTurnoDia();
+  dismissAlert();
+  speak(title, { flush: true });
+  showAlert(title, text);
+  if (state.view !== "supervisor") show("supervisor", { replace: true });
+  else startCamHere();
+}
+
 function showLoginGate(person) {
   const dni = normalizeDni(person?.dni || person?.id);
   if (!isSesionDni(dni)) {
     speak("Código no válido. Solo el DNI.");
+    return;
+  }
+  if (!navigator.onLine) {
+    speak("Se necesita señal para iniciar sesión");
+    showAlert(
+      "Se necesita señal",
+      "Para entrar hay que preguntar al servidor si este supervisor ya mandó hoy. Así el segundo celular sale bloqueado y solo Extra. Conecte internet e intente de nuevo."
+    );
     return;
   }
   const ap = twoApellidos(person);
@@ -1455,13 +1588,11 @@ function showLoginGate(person) {
   state.emergencyPending = false;
   state.scanQueue.length = 0;
   scanner.stop();
-  if (!store.setSesion(person)) {
-    state.loggingIn = false;
-    speak("No se pudo entrar. Intente de nuevo.");
-    startCamHere();
-    return;
-  }
-  ensureWorkers();
+  const turnoReady = checkTurno({
+    supervisorId: dni,
+    fecha: todayKey(TZ),
+    comida: currentLote(),
+  });
   speak(`Bienvenido${ap ? ` ${ap}` : ""}`, { flush: true });
   openAlert(`<div class="modal-back login-gate" data-act="stay">
     <div class="modal login-load" role="dialog" aria-modal="true" data-act="stay">
@@ -1487,11 +1618,39 @@ function showLoginGate(person) {
     }
     if (bar) bar.style.width = "100%";
     if (pct) pct.textContent = "100%";
-    window.setTimeout(() => {
+    window.setTimeout(async () => {
+      let r = null;
+      try {
+        r = await Promise.race([
+          turnoReady,
+          new Promise((resolve) => window.setTimeout(() => resolve({ ok: false, error: "timeout" }), 8000)),
+        ]);
+      } catch {
+        r = { ok: false, error: "sin_red" };
+      }
+      if (!r?.ok) {
+        abortLogin(
+          "Se necesita señal",
+          "No se pudo preguntar al servidor. Sin eso no se entra. Así no se manda el almuerzo dos veces. Intente con internet."
+        );
+        return;
+      }
+      if (!store.setSesion(person)) {
+        abortLogin("No se pudo entrar", "Intente de nuevo el QR.");
+        return;
+      }
+      store.setTurnoDia({
+        dni,
+        fecha: r.fecha || todayKey(TZ),
+        comida: r.comida || currentLote(),
+        enviado: !!r.enviado,
+      });
+      ensureWorkers();
       state.loggingIn = false;
       state.lastSpeak = "";
       dismissAlert();
       show("home");
+      if (r.enviado) speak("Hoy ya envió. Solo extra.", { flush: true });
     }, 280);
   };
   requestAnimationFrame(tick);
@@ -1757,6 +1916,7 @@ function viewFromHash() {
 }
 
 function guardView(view) {
+  if (!isFieldDevice()) return "lock";
   if (view === "lock") return "welcome";
   if (view === "scan" || view === "picksup" || view === "order" || view === "dia") return supervisor() ? "home" : "supervisor";
   if (!supervisor() && view !== "welcome" && view !== "supervisor") return "supervisor";
@@ -1987,12 +2147,12 @@ async function sendLista() {
     warnLocked();
     return;
   }
+  const extra = !!state.extraOn;
   const mesa = getMesa();
   if (!mesa.length) {
     speak("Nadie en el resumen");
     return;
   }
-  const extra = !!state.extraOn;
   state.busy = true;
   try {
     const t = nowParts(TZ);
@@ -2031,12 +2191,30 @@ async function sendLista() {
     setMesa(mesa.map((p) => ({ ...p, status: st })));
     for (const p of mesa) rememberDni(p);
     if (extra) state.extraOn = false;
-    speak(extra
-      ? `Extra: ${n} ${mealWord(comida, n)} al ${currentComedor()}`
-      : `Se pidió ${n} ${mealWord(comida, n)} al ${currentComedor()}`);
-    dismissAlert();
-    refreshPendPill();
-    show("home");
+    if (!extra && result.duplicate) {
+      speak("Ya se envió desde otro celular");
+      dismissAlert();
+      refreshPendPill();
+      show("home");
+      showAlert(
+        "Ya envió",
+        "Este supervisor ya mandó el almuerzo de hoy desde otro celular. Si falta alguien, pulse Extra."
+      );
+    } else if (result.status !== "enviado") {
+      speak(extra
+        ? `Sin señal. Extra de ${n} quedó en este celular.`
+        : `Sin señal. Quedó en este celular. Se envía al tener internet.`);
+      dismissAlert();
+      refreshPendPill();
+      show("home");
+    } else {
+      speak(extra
+        ? `Extra: ${n} ${mealWord(comida, n)} al ${currentComedor()}`
+        : `Se pidió ${n} ${mealWord(comida, n)} al ${currentComedor()}`);
+      dismissAlert();
+      refreshPendPill();
+      show("home");
+    }
   } finally {
     state.busy = false;
   }
@@ -2166,14 +2344,46 @@ async function onClick(e) {
     btn?.setAttribute("aria-expanded", menu.hidden ? "false" : "true");
     return;
   }
-  if (act === "go-historial") { state.histPage = 1; showHistorialModal(); return; }
+  if (act === "go-historial") {
+    state.histPage = 1;
+    state.histOpen = "";
+    state.histPeoplePage = 1;
+    state.histPeopleQuery = "";
+    showHistorialModal();
+    return;
+  }
+  if (act === "toggle-hist") {
+    const id = btn.dataset.id || "";
+    if (state.histOpen === id) {
+      state.histOpen = "";
+      state.histPeopleQuery = "";
+    } else {
+      state.histOpen = id;
+      state.histPeoplePage = 1;
+      state.histPeopleQuery = "";
+    }
+    showHistorialModal();
+    return;
+  }
   if (act === "hist-page-prev") {
     state.histPage = Math.max(1, (state.histPage || 1) - 1);
+    state.histOpen = "";
     showHistorialModal();
     return;
   }
   if (act === "hist-page-next") {
     state.histPage = (state.histPage || 1) + 1;
+    state.histOpen = "";
+    showHistorialModal();
+    return;
+  }
+  if (act === "hist-people-prev") {
+    state.histPeoplePage = Math.max(1, (state.histPeoplePage || 1) - 1);
+    showHistorialModal();
+    return;
+  }
+  if (act === "hist-people-next") {
+    state.histPeoplePage = (state.histPeoplePage || 1) + 1;
     showHistorialModal();
     return;
   }
@@ -2436,7 +2646,9 @@ async function onClick(e) {
     store.clearRecientes();
     store.clearMesa();
     store.clearSesion();
+    store.clearTurnoDia();
     state.emergencyPending = false;
+    state.extraOn = false;
     speak("Turno cerrado. Se borraron los DNI guardados.");
     show("supervisor");
     return;
@@ -2472,6 +2684,15 @@ async function boot() {
   state.swGuardUntil = Date.now() + 12000;
   bindInstallPrompt();
   bindAppHeight();
+  bindFieldLock((ok) => {
+    if (!ok) {
+      if (state.view !== "lock") show("lock", { replace: true });
+      return;
+    }
+    if (state.view === "lock") {
+      show(supervisor() ? "home" : "welcome", { replace: true });
+    }
+  });
   onVoiceState((on, phrase) => {
     state.lastSpeak = on ? phrase : "";
     const el = document.getElementById("speakbar");
@@ -2496,9 +2717,14 @@ async function boot() {
   window.addEventListener("online", () => {
     state.online = true;
     refreshNetFlag();
-    flushQueue().then((s) => {
-      if (s.sent) speak(`Se enviaron ${s.sent} pendientes`);
+    const afterNet = supervisor()
+      ? syncTurnoDelDia().then(() => flushQueue())
+      : flushQueue();
+    afterNet.then((s) => {
+      if (s?.duplicates) speak("Hoy ya envió. Solo extra.");
+      else if (s?.sent) speak(`Se enviaron ${s.sent} pendientes`);
       refreshPendPill();
+      refreshHomeLock();
     });
   });
   window.addEventListener("offline", () => {
@@ -2515,6 +2741,7 @@ async function boot() {
           return;
         }
         flushQueue().then(() => refreshPendPill());
+        if (supervisor()) syncTurnoDelDia().then(() => refreshHomeLock());
       });
     }
   });
@@ -2523,6 +2750,7 @@ async function boot() {
     refreshNetFlag();
     store.restoreSesion().then(() => {
       flushQueue().then(() => refreshPendPill());
+      if (supervisor()) syncTurnoDelDia().then(() => refreshHomeLock());
     });
   });
   window.addEventListener("popstate", syncFromUrl);
@@ -2577,6 +2805,7 @@ async function boot() {
   })();
   if (supervisor()) {
     store.setSesion(supervisor());
+    await syncTurnoDelDia({ timeoutMs: 2200 });
     const next = hash && hash !== "welcome" && hash !== "lock" && hash !== "supervisor" ? hash : "home";
     show(next, { replace: true });
     flushQueue().then(() => refreshPendPill());
@@ -2588,6 +2817,10 @@ async function boot() {
 }
 
 function enterApp() {
+  if (!isFieldDevice()) {
+    show("lock", { replace: true });
+    return;
+  }
   if (state.view !== "welcome") return;
   state.entered = true;
   unlockVoice();

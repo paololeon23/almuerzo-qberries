@@ -1,5 +1,5 @@
-export const APP_VERSION = "1.1.2";
-export const CACHE_NAME = "cocina-qb-v142";
+export const APP_VERSION = "1.2.3";
+export const CACHE_NAME = "cocina-qb-v153";
 export const APP_ASSETS = [
   "./",
   "./index.html",
@@ -33,6 +33,7 @@ export const STORAGE_KEYS = {
   recientes: "recientes_personas",
   dniGuardados: "dni_guardados",
   mesa: "mesa_hoy",
+  turnoDia: "turno_dia_enviado",
   scriptUrl: "apps_script_url",
 };
 

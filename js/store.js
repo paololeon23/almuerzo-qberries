@@ -203,11 +203,39 @@ export const store = {
   clearSesion() {
     try {
       localStorage.removeItem(STORAGE_KEYS.sesion);
+      localStorage.removeItem(STORAGE_KEYS.turnoDia);
     } catch {
       /* ignore */
     }
     wipeOldSessionCookie();
     idbDelDni();
+  },
+  getTurnoDia() {
+    const row = read(STORAGE_KEYS.turnoDia, null);
+    const day = todayKey(TZ);
+    const sid = normalizeDni(this.getSesionDni() || row?.dni);
+    if (!row || row.fecha !== day) return null;
+    if (sid && normalizeDni(row.dni) && normalizeDni(row.dni) !== sid) return null;
+    return row;
+  },
+  setTurnoDia(patch = {}) {
+    const day = todayKey(TZ);
+    const sid = normalizeDni(patch.dni || this.getSesionDni());
+    if (!isSesionDni(sid)) return false;
+    return write(STORAGE_KEYS.turnoDia, {
+      dni: sid,
+      fecha: patch.fecha || day,
+      comida: patch.comida || "Almuerzo",
+      enviado: !!patch.enviado,
+      at: Date.now(),
+    });
+  },
+  clearTurnoDia() {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.turnoDia);
+    } catch {
+      /* ignore */
+    }
   },
   getLocalWorkers() {
     return read(STORAGE_KEYS.catalogoTrab, []);

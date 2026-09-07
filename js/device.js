@@ -7,7 +7,7 @@ function isPhone() {
 }
 
 export function isFieldDevice() {
-  return true;
+  return isPhone();
 }
 
 export function bindAppHeight() {
@@ -22,6 +22,7 @@ export function bindAppHeight() {
 
 export function bindFieldLock(onChange) {
   const check = () => onChange(isPhone());
+  check();
   window.addEventListener("resize", check);
   window.addEventListener("orientationchange", () => setTimeout(check, 250));
 }
