@@ -24,9 +24,16 @@ function stampNow(payload = {}) {
   };
 }
 
-export async function checkTurno({ supervisorId, fecha, comida, url } = {}) {
+function abortAfter(ms) {
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), ms);
+  return ctrl.signal;
+}
+
+export async function checkTurno({ supervisorId, fecha, comida, url, timeoutMs } = {}) {
   const u = (url || store.getScriptUrl()).trim();
   if (!u) return { ok: false, error: "sin_url" };
+  if (!navigator.onLine) return { ok: false, error: "sin_red" };
   const t = nowParts(TZ);
   const sid = String(supervisorId || "").replace(/\D/g, "").slice(0, 8);
   if (!/^\d{8}$/.test(sid)) return { ok: false, error: "sesion_invalida" };
@@ -42,6 +49,7 @@ export async function checkTurno({ supervisorId, fecha, comida, url } = {}) {
       cache: "no-store",
       credentials: "omit",
       referrerPolicy: "no-referrer",
+      ...(timeoutMs ? { signal: abortAfter(timeoutMs) } : {}),
     });
     return JSON.parse(await res.text());
   } catch (err) {
@@ -109,27 +117,6 @@ function dropListaAsDuplicate(record) {
   markListaTurno(record);
 }
 
-async function serverAlreadyHasLista(record) {
-  const sid = String(record?.payload?.supervisor_id || store.getSesionDni() || "").replace(/\D/g, "").slice(0, 8);
-  if (!/^\d{8}$/.test(sid)) return false;
-  const t = await checkTurno({
-    supervisorId: sid,
-    fecha: record?.payload?.fecha_local,
-    comida: record?.payload?.comida || "Almuerzo",
-  });
-  if (!t?.ok) return false;
-  if (t.enviado) {
-    store.setTurnoDia({
-      dni: sid,
-      fecha: t.fecha,
-      comida: t.comida || "Almuerzo",
-      enviado: true,
-    });
-    return true;
-  }
-  return false;
-}
-
 export async function saveAndSync(record) {
   const queued = { ...record, payload: stampNow(record.payload || {}) };
   store.upsertCola(queued);
@@ -137,10 +124,6 @@ export async function saveAndSync(record) {
     return { status: "pendiente", record: queued };
   }
   try {
-    if (isListaRecord(queued) && await serverAlreadyHasLista(queued)) {
-      dropListaAsDuplicate(queued);
-      return { status: "enviado", duplicate: true, record: queued };
-    }
     const result = await postRecord(queued);
     store.pushHistorial({ ...result.record, duplicate: result.duplicate, confirmed: true });
     store.removeCola(result.record.clientId);
@@ -164,16 +147,7 @@ export async function flushQueue(onEach) {
   }
   flushing = true;
   try {
-    const firstLista = cola.find(isListaRecord);
-    if (firstLista && await serverAlreadyHasLista(firstLista)) {
-      for (const record of cola.filter(isListaRecord)) {
-        dropListaAsDuplicate(record);
-        summary.duplicates += 1;
-        onEach?.({ ok: true, record, result: { duplicate: true, already: true } });
-      }
-    }
-    const rest = store.getCola().filter((r) => r.type === "lista" || r.type === "extra" || r.type === "cierre");
-    for (const record of [...rest]) {
+    for (const record of [...cola]) {
       try {
         if (isListaRecord(record) && store.getTurnoDia()?.enviado) {
           dropListaAsDuplicate(record);

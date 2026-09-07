@@ -60,13 +60,20 @@
   <div id="update-veil" aria-hidden="true">
     <img class="update-mark" src="./assets/logo-qberries.png" alt="" />
     <p class="login-kicker">Q BERRIES</p>
-    <h3>Actualizando app</h3>
-    <p>Un momento. Traemos la versión nueva.</p>
+    <h3 id="update-title">Actualizando app</h3>
+    <p id="update-sub">Un momento. Traemos la versión nueva.</p>
     <div class="login-bar"><i id="update-bar"></i></div>
     <p class="login-pct" id="update-pct">0%</p>
   </div>
   <script>
     try {
+      var phrase = sessionStorage.getItem("qb_update_phrase");
+      var title = document.getElementById("update-title");
+      var sub = document.getElementById("update-sub");
+      if (phrase === "Borrando caché") {
+        if (title) title.textContent = "Borrando caché";
+        if (sub) sub.textContent = "Un momento. Limpiamos este celular.";
+      }
       if (sessionStorage.getItem("qb_updating") === "100") {
         var p = document.getElementById("update-pct");
         if (p) p.textContent = "100%";

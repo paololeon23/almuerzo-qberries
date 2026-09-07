@@ -547,9 +547,9 @@ function supervisorIdEnHojaSupervisores(ss, sid, fecha) {
     if (key === "fecha_local") colFecha = h + 1;
     if (key === "supervisor_id") colSid = h + 1;
   }
-  var start = Math.max(2, last - 1999);
+  var start = Math.max(2, last - 799);
   var values = sh.getRange(start, 1, last - start + 1, lastCol).getValues();
-  for (var i = 0; i < values.length; i++) {
+  for (var i = values.length - 1; i >= 0; i--) {
     if (normFecha(values[i][colFecha - 1]) !== fecha) continue;
     if (onlyDni(values[i][colSid - 1]) === sid) return true;
   }
@@ -561,9 +561,9 @@ function supervisorSentInPeople(pack, sid, fecha) {
   var last = sh.getLastRow();
   if (last < 2) return false;
   var lastCol = Math.max(sh.getLastColumn(), COLS_TRABAJADORES.length);
-  var start = Math.max(2, last - 3999);
+  var start = Math.max(2, last - 1199);
   var values = sh.getRange(start, 1, last - start + 1, lastCol).getValues();
-  for (var i = 0; i < values.length; i++) {
+  for (var i = values.length - 1; i >= 0; i--) {
     var row = values[i];
     if (normFecha(val(pack, row, "fecha_local")) !== fecha) continue;
     if (onlyDni(val(pack, row, "supervisor_id")) !== sid) continue;

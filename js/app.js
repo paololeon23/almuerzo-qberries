@@ -131,9 +131,9 @@ function emptyDraft(worker = null) {
 
 function freshFetch() {
   try {
-    return sessionStorage.getItem("qb_updating") ? "reload" : "no-store";
+    return sessionStorage.getItem("qb_updating") ? "reload" : "default";
   } catch {
-    return "no-store";
+    return "default";
   }
 }
 
@@ -412,6 +412,7 @@ async function syncTurnoDelDia({ timeoutMs = 2800 } = {}) {
       supervisorId: sid,
       fecha: todayKey(TZ),
       comida: currentLote(),
+      timeoutMs: timeoutMs || 2500,
     });
     if (!r?.ok) return store.getTurnoDia();
     store.setTurnoDia({
@@ -620,11 +621,21 @@ function showPerfilModal() {
   </div>`);
 }
 
-function showUpdatingVeil() {
+function showUpdatingVeil(phrase = "Actualizando app") {
   closeFab();
-  try { sessionStorage.setItem("qb_updating", "1"); } catch { /* ignore */ }
+  const clearing = /cach[eé]/i.test(phrase);
+  const heading = clearing ? "Borrando caché" : "Actualizando app";
+  const subtitle = clearing ? "Un momento. Limpiamos este celular." : "Un momento. Traemos la versión nueva.";
+  try {
+    sessionStorage.setItem("qb_updating", "1");
+    sessionStorage.setItem("qb_update_phrase", heading);
+  } catch { /* ignore */ }
   document.documentElement.classList.add("is-updating");
   document.documentElement.classList.remove("update-done", "update-full");
+  const title = document.getElementById("update-title");
+  const sub = document.getElementById("update-sub");
+  if (title) title.textContent = heading;
+  if (sub) sub.textContent = subtitle;
   const bar = document.getElementById("update-bar");
   const pct = document.getElementById("update-pct");
   if (bar) bar.style.width = "0%";
@@ -653,7 +664,10 @@ function hideUpdatingVeil() {
   const pct = document.getElementById("update-pct");
   if (bar) bar.style.width = "100%";
   if (pct) pct.textContent = "100%";
-  try { sessionStorage.removeItem("qb_updating"); } catch { /* ignore */ }
+  try {
+    sessionStorage.removeItem("qb_updating");
+    sessionStorage.removeItem("qb_update_phrase");
+  } catch { /* ignore */ }
   window.setTimeout(() => {
     document.documentElement.classList.add("update-done");
     window.setTimeout(() => {
@@ -688,9 +702,9 @@ async function pullLatestFiles() {
   } catch { /* sigue */ }
 }
 
-async function runAppUpdate() {
-  showUpdatingVeil();
-  speak("Actualizando app");
+async function runAppUpdate(phrase = "Actualizando app") {
+  showUpdatingVeil(phrase);
+  speak(phrase, { flush: true });
   state.swGuardUntil = Date.now() + 20000;
   const bar = animateUpdateBar(0, 85, 2000);
   await Promise.all([
@@ -787,7 +801,7 @@ function showUpdateModal() {
       <p class="app-ver" id="update-ver">Versión ${esc(APP_VERSION)}</p>
       <p class="update-status" id="update-status">Buscando en el servidor…</p>
       <div class="update-actions">
-        <button class="btn ghost" data-act="clear-cache" type="button">Borrar caché</button>
+        <button class="btn leaf" data-act="clear-cache" type="button">Borrar caché</button>
         <button class="btn leaf" data-act="reload-app" type="button">Actualizar app</button>
       </div>
     </div>
@@ -2153,71 +2167,63 @@ async function sendLista() {
     speak("Nadie en el resumen");
     return;
   }
-  state.busy = true;
-  try {
-    const t = nowParts(TZ);
-    const comida = currentLote();
-    const existing = extra ? null : store.getCola().find((r) => r.type === "lista" && !r.payload?.extra && r.payload?.comida === comida);
-    const loteId = extra ? uuid() : (existing?.payload?.lote_lista_id || uuid());
-    const n = mesa.length;
-    const personas = mesa.map((p) => ({
-      id: p.id,
-      dni: p.id,
-      apellido: p.apellido || "",
-      nombre: p.nombre || "",
-      area: p.cargo || p.area || "",
-    }));
-    const result = await saveAndSync({
-      clientId: extra ? `extra:${t.fecha}:${loteId}` : (existing?.clientId || `lista:${t.fecha}:${loteId}`),
-      type: extra ? "extra" : "lista",
-      payload: {
-        fecha_local: t.fecha,
-        hora_local: t.hora,
-        timezone: TZ,
-        supervisor_id: s.dni || s.id,
-        supervisor_apellido: twoApellidos(s),
-        hizo_pedido: true,
-        extra,
-        trabajadores_unicos: n,
-        etapa: currentEtapa(),
-        comida,
-        comedor: currentComedor(),
-        lote_lista_id: loteId,
-        personas,
-      },
-      createdAt: extra ? Date.now() : (existing?.createdAt || Date.now()),
-    });
-    const st = result.status === "enviado" ? "enviado" : "lista";
-    setMesa(mesa.map((p) => ({ ...p, status: st })));
-    for (const p of mesa) rememberDni(p);
-    if (extra) state.extraOn = false;
+  const t = nowParts(TZ);
+  const comida = currentLote();
+  const existing = extra ? null : store.getCola().find((r) => r.type === "lista" && !r.payload?.extra && r.payload?.comida === comida);
+  const loteId = extra ? uuid() : (existing?.payload?.lote_lista_id || uuid());
+  const n = mesa.length;
+  const record = {
+    clientId: extra ? `extra:${t.fecha}:${loteId}` : (existing?.clientId || `lista:${t.fecha}:${loteId}`),
+    type: extra ? "extra" : "lista",
+    payload: {
+      fecha_local: t.fecha,
+      hora_local: t.hora,
+      timezone: TZ,
+      supervisor_id: s.dni || s.id,
+      supervisor_apellido: twoApellidos(s),
+      hizo_pedido: true,
+      extra,
+      trabajadores_unicos: n,
+      etapa: currentEtapa(),
+      comida,
+      comedor: currentComedor(),
+      lote_lista_id: loteId,
+      personas: mesa.map((p) => ({
+        id: p.id,
+        dni: p.id,
+        apellido: p.apellido || "",
+        nombre: p.nombre || "",
+        area: p.cargo || p.area || "",
+      })),
+    },
+    createdAt: extra ? Date.now() : (existing?.createdAt || Date.now()),
+  };
+  store.upsertCola(record);
+  setMesa(mesa.map((p) => ({ ...p, status: "lista" })));
+  for (const p of mesa) rememberDni(p);
+  if (extra) state.extraOn = false;
+  dismissAlert();
+  refreshPendPill();
+  if (state.view === "home") refreshHomeLock();
+  else show("home");
+  const online = navigator.onLine;
+  speak(extra
+    ? (online ? `Extra: ${n} ${mealWord(comida, n)} al ${currentComedor()}` : `Sin señal. Extra de ${n} quedó en cola.`)
+    : (online ? `Se pidió ${n} ${mealWord(comida, n)} al ${currentComedor()}` : `Sin señal. Quedó en cola. Al tener internet se sube solo.`));
+  saveAndSync(record).then((result) => {
+    if (result.status === "enviado") {
+      setMesa(getMesa().map((p) => ({ ...p, status: "enviado" })));
+    }
+    refreshPendPill();
+    if (state.view === "home") refreshHomeLock();
     if (!extra && result.duplicate) {
       speak("Ya se envió desde otro celular");
-      dismissAlert();
-      refreshPendPill();
-      show("home");
       showAlert(
         "Ya envió",
         "Este supervisor ya mandó el almuerzo de hoy desde otro celular. Si falta alguien, pulse Extra."
       );
-    } else if (result.status !== "enviado") {
-      speak(extra
-        ? `Sin señal. Extra de ${n} quedó en este celular.`
-        : `Sin señal. Quedó en este celular. Se envía al tener internet.`);
-      dismissAlert();
-      refreshPendPill();
-      show("home");
-    } else {
-      speak(extra
-        ? `Extra: ${n} ${mealWord(comida, n)} al ${currentComedor()}`
-        : `Se pidió ${n} ${mealWord(comida, n)} al ${currentComedor()}`);
-      dismissAlert();
-      refreshPendPill();
-      show("home");
     }
-  } finally {
-    state.busy = false;
-  }
+  });
 }
 
 async function saveCierre() {
@@ -2265,11 +2271,7 @@ async function doSync() {
 
 async function clearAppCache() {
   store.clearDraftsOnly();
-  speak("App limpia. Los pedidos siguen.");
-  await pullLatestFiles();
-  const next = new URL(location.href);
-  next.searchParams.set("_up", String(Date.now()));
-  window.setTimeout(() => location.replace(next.href), 300);
+  await runAppUpdate("Borrando caché");
 }
 
 let tapLock = false;
@@ -2717,14 +2719,12 @@ async function boot() {
   window.addEventListener("online", () => {
     state.online = true;
     refreshNetFlag();
-    const afterNet = supervisor()
-      ? syncTurnoDelDia().then(() => flushQueue())
-      : flushQueue();
-    afterNet.then((s) => {
+    flushQueue().then((s) => {
       if (s?.duplicates) speak("Hoy ya envió. Solo extra.");
       else if (s?.sent) speak(`Se enviaron ${s.sent} pendientes`);
       refreshPendPill();
       refreshHomeLock();
+      if (supervisor()) syncTurnoDelDia().then(() => refreshHomeLock());
     });
   });
   window.addEventListener("offline", () => {
@@ -2756,6 +2756,12 @@ async function boot() {
   window.addEventListener("popstate", syncFromUrl);
   window.addEventListener("hashchange", syncFromUrl);
 
+  const catalogs = Promise.all([
+    loadJson("./data/config.json", {}),
+    loadJson("./data/supervisors.json", { supervisores: [] }),
+    loadJson("./data/lotes_catalogo.json", []),
+  ]);
+
   if ("serviceWorker" in navigator) {
     try {
       await navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" });
@@ -2763,11 +2769,7 @@ async function boot() {
     watchAppUpdates();
   }
 
-  const [cfg, sup, lotes] = await Promise.all([
-    loadJson("./data/config.json", {}),
-    loadJson("./data/supervisors.json", { supervisores: [] }),
-    loadJson("./data/lotes_catalogo.json", []),
-  ]);
+  const [cfg, sup, lotes] = await catalogs;
   state.cfg = cfg;
   state.menu = null;
   state.items = [];
@@ -2805,10 +2807,12 @@ async function boot() {
   })();
   if (supervisor()) {
     store.setSesion(supervisor());
-    await syncTurnoDelDia({ timeoutMs: 2200 });
     const next = hash && hash !== "welcome" && hash !== "lock" && hash !== "supervisor" ? hash : "home";
     show(next, { replace: true });
-    flushQueue().then(() => refreshPendPill());
+    if (state.online) {
+      syncTurnoDelDia({ timeoutMs: 2200 }).then(() => refreshHomeLock());
+      flushQueue().then(() => refreshPendPill());
+    }
   } else {
     show(hash === "supervisor" ? "supervisor" : "welcome", { replace: true });
     if (state.view === "welcome" && !wasUpdating) speak("Bienvenido a Cocina Q Berries");
