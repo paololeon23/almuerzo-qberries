@@ -19,7 +19,8 @@
  *   GET  /exec?action=quitar&dni=&date=
  *
  * Hojas: Trabajadores, Supervisores, Comidas extras.
- * hora_guardado = hora del celular. No se guarda client_id.
+ * hora_guardado = hora del celular. No se guarda client_id ni id de fila.
+ * Quitar persona = DNI + fecha (status = cancelled). La fila no se borra.
  * Lock del turno (solo hojas, no catálogo de internet):
  *   1) ¿Este supervisor_id ya está hoy en la hoja Supervisores?
  *   2) ¿Este supervisor_id ya tiene gente hoy en la hoja Trabajadores?
@@ -35,8 +36,11 @@
 
 var CACHE_TTL_SEC = 21600;
 var ADMIN_CACHE_SEC = 4;
-var APP_VERSION = "1.2.3";
+var APP_VERSION = "1.2.8";
 var TZ = "America/Lima";
+
+var FUNDOS = ["LICAPA I", "LICAPA II", "LICAPA III"];
+var DROP_COLS = ["lote_lista_id", "etapa", "lote", "lotes", "id"];
 
 var COLS_TRABAJADORES = [
   "fecha_local",
@@ -48,8 +52,7 @@ var COLS_TRABAJADORES = [
   "trabajador_nombre",
   "comida",
   "comedor",
-  "etapa",
-  "id",
+  "fundo",
   "status"
 ];
 
@@ -60,12 +63,13 @@ var COLS_SUPERVISORES = [
   "supervisor_apellido",
   "comida",
   "comedor",
-  "etapa",
+  "fundo",
   "total_comidas"
 ];
 
 var SUPERVISORS_JSON_URL = "https://almuerzo-qberries.netlify.app/data/supervisors.json";
 var SUP_CACHE_SEC = 60;
+var PACK_MEMO = {};
 
 var COMEDORES = [
   "Comedor 1", "Comedor 2", "Comedor 3", "Comedor 4", "Comedor 5",
@@ -171,9 +175,9 @@ function workerSave(body) {
       return jsonOut({ ok: false, error: "sesion_invalida" });
     }
     var sap = cell(p.supervisor_apellido, 80);
-    var comida = cell(p.comida, 40);
+    var comida = cell(p.comida, 40) || "Almuerzo";
     var comedor = canonSede(p.comedor) || cell(p.comedor, 40);
-    var etapa = cell(p.etapa, 40);
+    var fundo = canonFundo(p.fundo || p.etapa || p.lote);
     var type = String(body.type || "").toLowerCase();
     var extra = type === "extra" || p.extra === true;
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -226,7 +230,7 @@ function workerSave(body) {
           sap: sap,
           comida: comida,
           comedor: comedor,
-          etapa: etapa,
+          fundo: fundo,
           extra: true,
           status: "confirmed"
         });
@@ -244,7 +248,7 @@ function workerSave(body) {
     }
 
     var packT = ensurePersonSheet(ss, "Trabajadores");
-    var shS = sheetReady(ss, "Supervisores", COLS_SUPERVISORES);
+    var packS = ensureSupervisorSheet(ss);
     if (people.length) {
       writePeople(packT, people, {
         fecha: fecha,
@@ -253,12 +257,21 @@ function workerSave(body) {
         sap: sap,
         comida: comida,
         comedor: comedor,
-        etapa: etapa,
+        fundo: fundo,
         extra: false,
         status: "confirmed"
       });
     }
-    shS.appendRow([fecha, horaG, sid, sap, comida, comedor, etapa, n]);
+    appendSupervisor(packS, {
+      fecha: fecha,
+      hora: horaG,
+      sid: sid,
+      sap: sap,
+      comida: comida,
+      comedor: comedor,
+      fundo: fundo,
+      total: n
+    });
     markSupervisorSent(sid, fecha, comida);
     if (clientId) cache.put("id:" + clientId, "1", CACHE_TTL_SEC);
     bumpAdminCache();
@@ -300,9 +313,7 @@ function adminAdd(body) {
     var extra = active.length > 0;
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var pack = ensurePersonSheet(ss, extra ? "Comidas extras" : "Trabajadores");
-    var id = newId(extra ? "x" : "t");
     appendReserva(pack, {
-      id: id,
       fecha: fecha,
       hora: hora,
       sid: sup.dni,
@@ -312,7 +323,7 @@ function adminAdd(body) {
       nombre: parts.nombre,
       comida: "Almuerzo",
       comedor: sede,
-      etapa: "",
+      fundo: canonFundo(body.fundo || body.etapa || body.lote),
       status: "confirmed"
     });
     bumpAdminCache();
@@ -321,7 +332,7 @@ function adminAdd(body) {
       saved: true,
       extra: extra,
       reserva: {
-        id: id,
+        id: dni,
         dni: dni,
         name: name,
         date: fecha,
@@ -406,10 +417,8 @@ function readSheetReservas(pack, fromExtra, desde, hasta) {
     var nombre = String(val(pack, row, "trabajador_nombre") || "").trim();
     var name = (apellido + " " + nombre).replace(/\s+/g, " ").trim();
     if (!name) continue;
-    var id = String(val(pack, row, "id") || "").trim();
-    if (!id) id = (fromExtra ? "x" : "t") + "-" + (start + i);
     out.push({
-      id: id,
+      id: dni,
       dni: dni,
       name: name,
       date: fecha,
@@ -485,8 +494,10 @@ function cancelInSheet(pack, dni, fecha, id) {
     var row = values[i];
     var rowFecha = normFecha(val(pack, row, "fecha_local"));
     var rowDni = onlyDni(val(pack, row, "trabajador_dni"));
-    var rowId = String(val(pack, row, "id") || "").trim();
-    var match = id ? (rowId === id) : (rowDni === dni && rowFecha === fecha);
+    var wantDni = onlyDni(dni || id);
+    var match = false;
+    if (wantDni && /^\d{8}$/.test(wantDni) && rowDni === wantDni && rowFecha === fecha) match = true;
+    else if (id && String(val(pack, row, "id") || "").trim() === id) match = true;
     if (!match) continue;
     if (normStatus(val(pack, row, "status")) === "cancelled") continue;
     sh.getRange(start + i, colStatus).setValue("cancelled");
@@ -535,23 +546,17 @@ function supervisorYaRegistroHoy(ss, sid, fecha) {
 }
 
 function supervisorIdEnHojaSupervisores(ss, sid, fecha) {
-  var sh = sheetReady(ss, "Supervisores", COLS_SUPERVISORES);
+  var pack = ensureSupervisorSheet(ss);
+  var sh = pack.sh;
   var last = sh.getLastRow();
   if (last < 2) return false;
   var lastCol = Math.max(sh.getLastColumn(), COLS_SUPERVISORES.length);
-  var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
-  var colFecha = 1;
-  var colSid = 3;
-  for (var h = 0; h < headers.length; h++) {
-    var key = String(headers[h] || "").toLowerCase().trim();
-    if (key === "fecha_local") colFecha = h + 1;
-    if (key === "supervisor_id") colSid = h + 1;
-  }
   var start = Math.max(2, last - 799);
   var values = sh.getRange(start, 1, last - start + 1, lastCol).getValues();
   for (var i = values.length - 1; i >= 0; i--) {
-    if (normFecha(values[i][colFecha - 1]) !== fecha) continue;
-    if (onlyDni(values[i][colSid - 1]) === sid) return true;
+    var row = values[i];
+    if (normFecha(val(pack, row, "fecha_local")) !== fecha) continue;
+    if (onlyDni(val(pack, row, "supervisor_id")) === sid) return true;
   }
   return false;
 }
@@ -578,7 +583,6 @@ function writePeople(pack, people, meta) {
   for (var i = 0; i < people.length; i++) {
     var w = people[i] || {};
     rows.push(reservaRow(pack, {
-      id: newId(meta.extra ? "x" : "t"),
       fecha: meta.fecha,
       hora: meta.hora,
       sid: meta.sid,
@@ -588,7 +592,7 @@ function writePeople(pack, people, meta) {
       nombre: cell(w.nombre, 80),
       comida: meta.comida,
       comedor: meta.comedor,
-      etapa: meta.etapa,
+      fundo: meta.fundo,
       status: meta.status || "confirmed"
     }));
   }
@@ -598,6 +602,24 @@ function writePeople(pack, people, meta) {
 
 function appendReserva(pack, rec) {
   pack.sh.getRange(pack.sh.getLastRow() + 1, 1, 1, pack.width).setValues([reservaRow(pack, rec)]);
+}
+
+function appendSupervisor(pack, rec) {
+  pack.sh.getRange(pack.sh.getLastRow() + 1, 1, 1, pack.width).setValues([supervisorRow(pack, rec)]);
+}
+
+function supervisorRow(pack, rec) {
+  var row = [];
+  for (var i = 0; i < pack.width; i++) row.push("");
+  setCol(pack, row, "fecha_local", rec.fecha);
+  setCol(pack, row, "hora_guardado", rec.hora);
+  setCol(pack, row, "supervisor_id", rec.sid);
+  setCol(pack, row, "supervisor_apellido", rec.sap);
+  setCol(pack, row, "comida", rec.comida);
+  setCol(pack, row, "comedor", rec.comedor);
+  setCol(pack, row, "fundo", rec.fundo);
+  setCol(pack, row, "total_comidas", rec.total);
+  return row;
 }
 
 function reservaRow(pack, rec) {
@@ -612,8 +634,7 @@ function reservaRow(pack, rec) {
   setCol(pack, row, "trabajador_nombre", rec.nombre);
   setCol(pack, row, "comida", rec.comida);
   setCol(pack, row, "comedor", rec.comedor);
-  setCol(pack, row, "etapa", rec.etapa);
-  setCol(pack, row, "id", rec.id);
+  setCol(pack, row, "fundo", rec.fundo);
   setCol(pack, row, "status", rec.status || "confirmed");
   return row;
 }
@@ -630,24 +651,104 @@ function val(pack, row, name) {
   return row[col - 1];
 }
 
-function ensurePersonSheet(ss, name) {
-  var sh = sheetReady(ss, name, COLS_TRABAJADORES);
+function dropUnusedCols(sh) {
+  var lastCol = sh.getLastColumn();
+  if (lastCol < 1) return;
+  var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+  for (var i = headers.length - 1; i >= 0; i--) {
+    var key = String(headers[i] || "").toLowerCase().trim();
+    if (DROP_COLS.indexOf(key) >= 0) sh.deleteColumn(i + 1);
+  }
+}
+
+function headerIndex(sh) {
   var lastCol = Math.max(sh.getLastColumn(), 1);
   var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
   var map = {};
   for (var i = 0; i < headers.length; i++) {
     var key = String(headers[i] || "").toLowerCase().trim();
+    if (key) map[key] = i;
+  }
+  return map;
+}
+
+function migrateFundoHeader(sh) {
+  var map = headerIndex(sh);
+  if (map.fundo != null) return;
+  if (map.etapa != null) {
+    sh.getRange(1, map.etapa + 1).setValue("fundo").setFontWeight("bold");
+    return;
+  }
+  if (map.lote != null) {
+    sh.getRange(1, map.lote + 1).setValue("fundo").setFontWeight("bold");
+    return;
+  }
+  if (map.lotes != null) {
+    sh.getRange(1, map.lotes + 1).setValue("fundo").setFontWeight("bold");
+  }
+}
+
+function mapFromHeaders(hdrs) {
+  var map = {};
+  for (var i = 0; i < hdrs.length; i++) {
+    var key = String(hdrs[i] || "").toLowerCase().trim();
     if (key) map[key] = i + 1;
   }
-  for (var j = 0; j < COLS_TRABAJADORES.length; j++) {
-    var need = COLS_TRABAJADORES[j];
-    if (!map[need]) {
-      var col = sh.getLastColumn() + 1;
-      sh.getRange(1, col).setValue(need).setFontWeight("bold");
-      map[need] = col;
+  return map;
+}
+
+function headersNeedFix(map, headers) {
+  if (!map.fundo) return true;
+  var i;
+  for (i = 0; i < headers.length; i++) {
+    if (!map[headers[i]]) return true;
+  }
+  for (i = 0; i < DROP_COLS.length; i++) {
+    if (map[DROP_COLS[i]]) return true;
+  }
+  return false;
+}
+
+function packWidth(map) {
+  var w = 0;
+  for (var k in map) {
+    if (map[k] > w) w = map[k];
+  }
+  return w;
+}
+
+function ensureNamedSheet(ss, name, headers) {
+  if (PACK_MEMO[name]) return PACK_MEMO[name];
+  var sh = sheetReady(ss, name, headers);
+  var lastCol = Math.max(sh.getLastColumn(), 1);
+  var hdrs = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+  var map = mapFromHeaders(hdrs);
+  if (headersNeedFix(map, headers)) {
+    migrateFundoHeader(sh);
+    dropUnusedCols(sh);
+    lastCol = Math.max(sh.getLastColumn(), 1);
+    hdrs = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+    map = mapFromHeaders(hdrs);
+    for (var j = 0; j < headers.length; j++) {
+      var need = headers[j];
+      if (!map[need]) {
+        var col = sh.getLastColumn() + 1;
+        sh.getRange(1, col).setValue(need).setFontWeight("bold");
+        map[need] = col;
+      }
     }
   }
-  return { sh: sh, map: map, width: sh.getLastColumn() };
+  var pack = { sh: sh, map: map, width: packWidth(map) };
+  PACK_MEMO[name] = pack;
+  return pack;
+}
+
+function ensurePersonSheet(ss, name) {
+  return ensureNamedSheet(ss, name, COLS_TRABAJADORES);
+}
+
+function ensureSupervisorSheet(ss) {
+  return ensureNamedSheet(ss, "Supervisores", COLS_SUPERVISORES);
 }
 
 function supervisorsUrl() {
@@ -800,6 +901,14 @@ function isExtraFlag(v) {
   return s === "true" || s === "1" || s === "si" || s === "extra";
 }
 
+function canonFundo(raw) {
+  var s = fold(String(raw || ""));
+  if (/licapa\s*(iii|3)\b/.test(s)) return "LICAPA III";
+  if (/licapa\s*(ii|2)\b/.test(s)) return "LICAPA II";
+  if (/licapa\s*(i|1)\b/.test(s)) return "LICAPA I";
+  return "LICAPA I";
+}
+
 function canonSede(raw) {
   var s = String(raw || "").replace(/\s+/g, " ").trim();
   if (!s) return "";
@@ -870,10 +979,6 @@ function fold(s) {
     .trim();
 }
 
-function newId(prefix) {
-  return prefix + "-" + Utilities.formatDate(new Date(), TZ, "yyyyMMddHHmmss") + "-" + String(Math.floor(Math.random() * 9000) + 1000);
-}
-
 function bumpAdminCache() {
   try {
     var c = CacheService.getScriptCache();
@@ -913,12 +1018,8 @@ function textOut(obj) {
 function setupSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   ensurePersonSheet(ss, "Trabajadores");
-  sheetReady(ss, "Supervisores", COLS_SUPERVISORES);
   ensurePersonSheet(ss, "Comidas extras");
-  var shS = ss.getSheetByName("Supervisores");
-  shS.getRange(1, 1, 1, COLS_SUPERVISORES.length).setValues([COLS_SUPERVISORES]);
-  shS.getRange(1, 1, 1, COLS_SUPERVISORES.length).setFontWeight("bold");
-  shS.setFrozenRows(1);
+  ensureSupervisorSheet(ss);
 }
 
 function seedDemoData() {
@@ -946,7 +1047,6 @@ function seedDemoData() {
     var sup = cats[idx % cats.length];
     var parts = splitName(sample.name);
     appendReserva(pack, {
-      id: newId(extra ? "x" : "t"),
       fecha: day,
       hora: time,
       sid: sup.dni,
@@ -956,7 +1056,7 @@ function seedDemoData() {
       nombre: parts.nombre,
       comida: "Almuerzo",
       comedor: COMEDORES[idx % COMEDORES.length],
-      etapa: "LICAPA I",
+      fundo: "LICAPA I",
       status: status
     });
   }

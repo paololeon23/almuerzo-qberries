@@ -569,7 +569,7 @@ function showHistorialModal() {
     const fecha = p.fecha_local && p.fecha_local !== today
       ? String(p.fecha_local).slice(5).replace("-", "/")
       : "";
-    const meta = [p.etapa || "—", p.comedor || "—", fecha, hora].filter(Boolean).join(" · ");
+    const meta = [p.fundo || p.etapa || "—", p.comedor || "—", fecha, hora].filter(Boolean).join(" · ");
     const id = histRecordId(r);
     const open = openId === id;
     const badge = r.type === "extra" || p.extra ? "Extra" : (r.duplicate ? "Ya estaba" : "Confirmado");
@@ -972,7 +972,7 @@ function footer(active, extra = "") {
 
 function lotePills() {
   const extra = !!state.extraOn;
-  return `<div class="lote-pills" role="group" aria-label="Lote">
+  return `<div class="lote-pills" role="group" aria-label="Comida">
     <button type="button" class="${extra ? "" : "on"}" data-act="set-lote" data-id="Almuerzo">Almuerzo</button>
     <button type="button" class="extra${extra ? " on" : ""}" data-act="toggle-extra">Extra</button>
   </div>`;
@@ -985,7 +985,7 @@ function loteCard() {
     ${extra ? `<p class="extra-note">Modo extra activo. Se olvidó o llegó tarde. Va a Comidas extras.</p>` : ""}
     ${locked ? `<p class="extra-note">Ya envió el almuerzo hoy. Todo está bloqueado. Pulse Extra para olvidados o tardanzas.</p>` : ""}
     ${!locked && !extra && !navigator.onLine ? `<p class="extra-note">Sin señal. Puede escanear y enviar. Queda pendiente en este celular hasta tener internet.</p>` : ""}
-    ${sectionHead("Lote del turno", extra ? "Escanee solo a quien falta. Entra como extra." : "Almuerzo o Extra. Después presente el QR de cada persona.")}
+    ${sectionHead("Turno", extra ? "Escanee solo a quien falta. Entra como extra." : "Almuerzo o Extra. Después presente el QR de cada persona.")}
     ${lotePills()}
   </section>`;
 }
@@ -1000,14 +1000,18 @@ function comedores() {
   ];
 }
 
-function etapas() {
-  return ["LICAPA I", "LICAPA II"];
+function fundos() {
+  return ["LICAPA I", "LICAPA II", "LICAPA III"];
+}
+
+function currentFundo() {
+  const list = fundos();
+  const saved = store.getPrefs().fundo || store.getPrefs().etapa;
+  return list.includes(saved) ? saved : list[0];
 }
 
 function currentEtapa() {
-  const list = etapas();
-  const saved = store.getPrefs().etapa;
-  return list.includes(saved) ? saved : list[0];
+  return currentFundo();
 }
 
 function currentComedor() {
@@ -1177,12 +1181,12 @@ function showSummaryModal() {
   const mesa = getMesa();
   const meal = currentLote();
   const n = mesa.length;
-  const etapaOpts = etapas().map((name) => [name, name]);
+  const fundoOpts = fundos().map((name) => [name, name]);
   const comedorOpts = comedores().map((name) => [name, name]);
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
       <div class="summary-top">
-        ${sectionHead("Solicitud de almuerzo", state.extraOn ? "Entra como extra (se olvidó o llegó tarde). Va a Comidas extras." : "Confirme etapa y comedor antes de enviar.")}
+        ${sectionHead("Solicitud de almuerzo", state.extraOn ? "Entra como extra (se olvidó o llegó tarde). Va a Comidas extras." : "Confirme fundo y comedor antes de enviar.")}
         ${netFlag()}
       </div>
       <div class="summary-stat">
@@ -1192,8 +1196,8 @@ function showSummaryModal() {
       <p class="summary-auth"><span>Autoriza</span><strong>${esc(authLabel())}</strong></p>
       <div class="summary-fields">
         <div class="pick-field">
-          <p class="pick-label">Etapa</p>
-          ${pickSelect("sel-etapa", currentEtapa(), etapaOpts)}
+          <p class="pick-label">Fundo</p>
+          ${pickSelect("sel-fundo", currentFundo(), fundoOpts)}
         </div>
         <div class="pick-field">
           <p class="pick-label">Comedor</p>
@@ -1406,7 +1410,7 @@ function scanHelp() {
 function showEmergencyWarn() {
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
-      ${sectionHead("Cualquier persona", "El botón rojo deja entrar a cualquiera. Serás responsable de solicitar la comida. Escanea tu QR. Después podrás elegir etapa y comedor.")}
+      ${sectionHead("Cualquier persona", "El botón rojo deja entrar a cualquiera. Serás responsable de solicitar la comida. Escanea tu QR. Después podrás elegir fundo y comedor.")}
       <p class="extra-note">Ten cuidado, por favor. Esto es solo por emergencia.</p>
       <div class="footer-actions solo" style="margin-top:8px">
         <button class="btn leaf" data-act="confirm-emergency" type="button">Entendido</button>
@@ -1719,6 +1723,7 @@ function homeView() {
     ${fabBlock()}
   </div>`);
   startCamHere();
+  ensureWorkers();
 }
 
 function scanView() {
@@ -2001,7 +2006,7 @@ function scanPayload(worker) {
     area: worker.cargo || worker.area || "",
     tipo_formulario: "pedido",
     hizo_pedido: true,
-    etapa: currentEtapa(),
+    fundo: currentFundo(),
     comida: currentLote(),
     comedor: currentComedor(),
     platos_detalle: currentLote(),
@@ -2170,10 +2175,10 @@ async function sendLista() {
   const t = nowParts(TZ);
   const comida = currentLote();
   const existing = extra ? null : store.getCola().find((r) => r.type === "lista" && !r.payload?.extra && r.payload?.comida === comida);
-  const loteId = extra ? uuid() : (existing?.payload?.lote_lista_id || uuid());
+  const sendId = extra ? uuid() : (existing?.payload?.send_id || existing?.payload?.lote_lista_id || uuid());
   const n = mesa.length;
   const record = {
-    clientId: extra ? `extra:${t.fecha}:${loteId}` : (existing?.clientId || `lista:${t.fecha}:${loteId}`),
+    clientId: extra ? `extra:${t.fecha}:${sendId}` : (existing?.clientId || `lista:${t.fecha}:${sendId}`),
     type: extra ? "extra" : "lista",
     payload: {
       fecha_local: t.fecha,
@@ -2184,10 +2189,10 @@ async function sendLista() {
       hizo_pedido: true,
       extra,
       trabajadores_unicos: n,
-      etapa: currentEtapa(),
+      fundo: currentFundo(),
       comida,
       comedor: currentComedor(),
-      lote_lista_id: loteId,
+      send_id: sendId,
       personas: mesa.map((p) => ({
         id: p.id,
         dni: p.id,
@@ -2548,7 +2553,7 @@ async function onClick(e) {
     const pick = btn.dataset.pick;
     const id = btn.dataset.id;
     const lab = btn.dataset.label || btn.textContent.trim();
-    if (pick === "sel-etapa") store.setPrefs({ etapa: id });
+    if (pick === "sel-fundo" || pick === "sel-etapa") store.setPrefs({ fundo: id, etapa: id });
     if (pick === "sel-comedor") store.setPrefs({ comedor: id });
     const wrap = btn.closest(".pick");
     if (wrap) {
@@ -2759,7 +2764,6 @@ async function boot() {
   const catalogs = Promise.all([
     loadJson("./data/config.json", {}),
     loadJson("./data/supervisors.json", { supervisores: [] }),
-    loadJson("./data/lotes_catalogo.json", []),
   ]);
 
   if ("serviceWorker" in navigator) {
@@ -2769,11 +2773,11 @@ async function boot() {
     watchAppUpdates();
   }
 
-  const [cfg, sup, lotes] = await catalogs;
+  const [cfg, sup] = await catalogs;
   state.cfg = cfg;
   state.menu = null;
   state.items = [];
-  state.lotes = Array.isArray(lotes) ? lotes : [];
+  state.lotes = [];
 
   state.supByDni = new Map();
   const byDni = sup.byDni && typeof sup.byDni === "object" ? sup.byDni : {};
@@ -2798,7 +2802,6 @@ async function boot() {
   state.workers = [];
   if (cfg.appsScriptUrl) store.setScriptUrl(cfg.appsScriptUrl);
   dropScanCola();
-  ensureWorkers();
 
   await store.restoreSesion();
   const hash = viewFromHash();
