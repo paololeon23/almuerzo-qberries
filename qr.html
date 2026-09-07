@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Instalar Solicitud de almuerzo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100svh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #fff;
+      color: #111;
+      text-align: center;
+    }
+    img.logo { width: 72px; height: auto; }
+    h1 { margin: 12px 0 4px; font-size: 22px; }
+    p { margin: 0 0 16px; color: #555; font-size: 15px; }
+    .qr {
+      width: min(280px, 72vw);
+      height: auto;
+      margin: 8px auto 16px;
+      border: 1px solid #eceff1;
+      border-radius: 16px;
+      padding: 12px;
+      background: #fff;
+    }
+    code {
+      display: block;
+      margin: 0 0 18px;
+      font-size: 13px;
+      word-break: break-all;
+      color: #1f3d2a;
+    }
+    ol {
+      margin: 0 auto;
+      padding: 0 0 0 18px;
+      max-width: 320px;
+      text-align: left;
+      color: #333;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    @media print {
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <img class="logo" src="./assets/logo-qberries.png" alt="Q Berries" />
+    <h1>Solicitud de almuerzo</h1>
+    <p>Escanea con el celular para abrir e instalar la app.</p>
+    <img class="qr" src="./assets/qr-instalar.png" alt="QR para instalar la app" />
+    <code>https://almuerzo-qberries.netlify.app/install.html</code>
+    <ol>
+      <li>Android: abre en Chrome y toca <b>Instalar aplicación</b>.</li>
+      <li>iPhone: ábrelo en Safari → Compartir → <b>Agregar a pantalla de inicio</b>.</li>
+      <li>Entra por el ícono y escanea el carnet del supervisor.</li>
+    </ol>
+  </div>
+</body>
+</html>

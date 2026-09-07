@@ -1,5 +1,5 @@
-export const APP_VERSION = "1.3.5";
-export const CACHE_NAME = "cocina-qb-v165";
+export const APP_VERSION = "1.3.6";
+export const CACHE_NAME = "cocina-qb-v166";
 export const APP_ASSETS = [
   "./",
   "./index.html",
@@ -20,6 +20,8 @@ export const APP_ASSETS = [
   "./data/trabajadores.json",
   "./assets/logo-qberries.png",
   "./icons/icon-192.png",
+  "./icons/icon-512.png",
+  "./icons/apple-touch-icon.png",
 ];
 export const TZ = "America/Lima";
 export const HISTORY_TTL_MS = 48 * 60 * 60 * 1000;

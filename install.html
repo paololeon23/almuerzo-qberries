@@ -3,37 +3,113 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#e31b23" />
-  <title>Poner en el celular</title>
-  <link rel="stylesheet" href="./css/app.css" />
-  <script src="./js/vendor/qrcode.js"></script>
+  <meta name="theme-color" content="#1f3d2a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Solicitud de almuerzo" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <link rel="icon" href="./icons/icon-192.png" type="image/png" />
+  <title>Instalar Solicitud de almuerzo</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #fff; color: #111; font-family: "Segoe UI", system-ui, sans-serif; }
+    body { padding: 28px 20px calc(24px + env(safe-area-inset-bottom)); text-align: center; }
+    .logo { width: 72px; height: auto; }
+    .kicker { margin: 10px 0 0; color: #dc2626; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; }
+    h1 { margin: 8px 0 8px; font-size: 24px; }
+    .sub { margin: 0 0 20px; color: #6f6f6f; font-size: 15px; line-height: 1.4; }
+    .icon { width: 72px; height: 72px; border-radius: 18px; margin: 8px auto 12px; display: block; }
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: min(100%, 360px); min-height: 52px; margin: 0 auto 12px;
+      border: 0; border-radius: 16px; background: #1f3d2a; color: #fff;
+      font-size: 16px; font-weight: 800;
+    }
+    .btn.ghost { background: #fff; color: #1f3d2a; box-shadow: inset 0 0 0 1.5px #1f3d2a; }
+    .steps { margin: 0 auto; padding: 0; max-width: 360px; text-align: left; list-style: none; }
+    .steps li {
+      display: flex; gap: 12px; align-items: flex-start;
+      margin: 0 0 12px; padding: 12px 14px; border: 1px solid #eceff1; border-radius: 14px;
+      font-size: 15px; line-height: 1.35;
+    }
+    .n { flex: 0 0 24px; height: 24px; border-radius: 99px; background: #1f3d2a; color: #fff; font-size: 13px; font-weight: 800; display: grid; place-items: center; }
+    .note { margin: 16px auto 0; max-width: 360px; color: #9a3412; font-size: 13px; font-weight: 650; }
+    .ok { color: #166534; }
+    .hide { display: none; }
+  </style>
 </head>
 <body>
-  <div id="app">
-    <div class="shell">
-      <div class="scroll">
-        <div class="top">
-          <img class="logo" src="./assets/logo-qberries.png" alt="Q Berries" />
-        </div>
-        <p class="hello">En tu celular</p>
-        <p class="sub">Tres toques y queda como una app.</p>
-        <div class="install-qr" id="qr"></div>
-        <div class="card">
-          <h3>Así se pone</h3>
-          <p>1. En Chrome, toca el menú<br>2. Toca “Añadir a pantalla de inicio”<br>3. Abre el ícono y escanea al supervisor</p>
-        </div>
-      </div>
-      <div class="footer">
-        <a class="btn" href="./index.html">Entrar a pedir</a>
-      </div>
-    </div>
+  <img class="logo" src="./assets/logo-qberries.png" alt="Q Berries" />
+  <p class="kicker">Q BERRIES</p>
+  <h1>Solicitud de almuerzo</h1>
+  <p class="sub" id="sub">Así queda en el celular, como una app.</p>
+  <img class="icon" src="./icons/icon-192.png" alt="" />
+
+  <div id="android" class="hide">
+    <button class="btn" id="installBtn" type="button">Instalar aplicación</button>
+    <p class="sub">Android: un toque e instala. Si no sale el aviso, use Chrome.</p>
+    <a class="btn ghost" href="./index.html">Entrar sin instalar</a>
   </div>
+
+  <div id="iphone" class="hide">
+    <p class="sub">En iPhone no sale “Instalar” solo. Hay que agregarla a inicio, en Safari.</p>
+    <ol class="steps">
+      <li><span class="n">1</span><span>Si esto se abrió en WhatsApp u otra app, toque <b>Abrir en Safari</b>.</span></li>
+      <li><span class="n">2</span><span>En Safari, toque el botón <b>Compartir</b> (cuadrado con flecha).</span></li>
+      <li><span class="n">3</span><span>Toque <b>Agregar a pantalla de inicio</b>. El nombre es Solicitud de almuerzo.</span></li>
+    </ol>
+    <p class="note" id="iosNote">Apple no deja instalar automático. Es el camino de iPhone.</p>
+    <a class="btn ghost" href="./index.html">Entrar en Safari</a>
+  </div>
+
+  <div id="other" class="hide">
+    <p class="sub">Ábralo en el celular. En Android use Chrome. En iPhone use Safari.</p>
+  </div>
+
   <script>
-    const url = location.href.replace(/install\.html.*$/i, "index.html");
-    const qr = qrcode(0, "M");
-    qr.addData(url);
-    qr.make();
-    document.getElementById("qr").innerHTML = qr.createSvgTag({ scalable: true, margin: 2 });
+    const ua = navigator.userAgent || "";
+    const ios = /iPhone|iPad|iPod/i.test(ua);
+    const android = /Android/i.test(ua);
+    const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    let deferred = null;
+    const $ = (id) => document.getElementById(id);
+
+    if (standalone) {
+      location.replace("./index.html");
+    } else if (android) {
+      $("android").classList.remove("hide");
+    } else if (ios) {
+      $("iphone").classList.remove("hide");
+      if (!/Safari/i.test(ua) || /CriOS|FxiOS|EdgiOS|Instagram|FBAN|FBAV|WhatsApp/i.test(ua)) {
+        $("iosNote").textContent = "Ábralo en Safari. Desde WhatsApp no se puede agregar a inicio.";
+      }
+    } else {
+      $("other").classList.remove("hide");
+    }
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferred = e;
+      $("android").classList.remove("hide");
+      $("iphone").classList.add("hide");
+      $("other").classList.add("hide");
+      $("sub").textContent = "Toque Instalar aplicación. Queda en el inicio.";
+    });
+    window.addEventListener("appinstalled", () => {
+      location.replace("./index.html");
+    });
+
+    $("installBtn")?.addEventListener("click", async () => {
+      if (deferred) {
+        deferred.prompt();
+        const choice = await deferred.userChoice;
+        deferred = null;
+        if (choice?.outcome === "accepted") location.replace("./index.html");
+        return;
+      }
+      alert("En Chrome: menú ⋮ → Instalar app o Agregar a pantalla de inicio.");
+    });
   </script>
 </body>
 </html>

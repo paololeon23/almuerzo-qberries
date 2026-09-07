@@ -1,4 +1,4 @@
-const CACHE_NAME = "cocina-qb-v165";
+const CACHE_NAME = "cocina-qb-v166";
 
 const PRECACHE = [
   "./",
@@ -19,6 +19,8 @@ const PRECACHE = [
   "./data/trabajadores.json",
   "./assets/logo-qberries.png",
   "./icons/icon-192.png",
+  "./icons/icon-512.png",
+  "./icons/apple-touch-icon.png",
 ];
 
 function sameOrigin(url) {
