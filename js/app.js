@@ -162,6 +162,12 @@ function twoApellidos(person) {
   return nameParts(person).apellido;
 }
 
+function supervisorNombreCompleto(s) {
+  if (!s) return "";
+  const full = nameParts(s).nombreCompleto || [s.apellido, s.nombre].filter(Boolean).join(" ");
+  return String(full || s.apellido || "").replace(/\s+/g, " ").trim().toUpperCase();
+}
+
 function mapTrabajador(row) {
   const dni = normalizeDni(row.dni || row.id);
   const parsed = nameParts({ nombreCompleto: row.nombre, apellido: row.apellido, nombre: row.nombre });
@@ -284,27 +290,9 @@ function esc(s) {
   }[c]));
 }
 
-function netFlag() {
-  return `<span class="net-flag ${state.online ? "on" : "off"}" id="net-flag">${state.online ? "En línea" : "Sin señal"}</span>`;
-}
-
-function refreshNetFlag() {
-  const el = document.getElementById("net-flag");
-  if (el) {
-    el.className = `net-flag ${state.online ? "on" : "off"}`;
-    el.textContent = state.online ? "En línea" : "Sin señal";
-  }
-  const pill = document.querySelector(".pill-net");
-  if (pill) {
-    pill.className = `pill pill-net ${state.online ? "live" : "off"}`;
-    pill.innerHTML = `<i></i>${state.online ? "En línea" : "Sin señal"}`;
-  }
-}
-
 function statusPills() {
   const n = pendingCount();
   return `<div class="appbar-status">
-    <span class="pill pill-net ${state.online ? "live" : "off"}"><i></i>${state.online ? "En línea" : "Sin señal"}</span>
     <span class="pill pend"><i class="up"></i>${n} pend.</span>
   </div>`;
 }
@@ -1187,7 +1175,6 @@ function showSummaryModal() {
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
       <div class="summary-top">
         ${sectionHead("Solicitud de almuerzo", state.extraOn ? "Entra como extra (se olvidó o llegó tarde). Va a Comidas extras." : "Confirme fundo y comedor antes de enviar.")}
-        ${netFlag()}
       </div>
       <div class="summary-stat">
         <b>${n}</b>
@@ -1999,7 +1986,8 @@ function scanPayload(worker) {
     hora_local: t.hora,
     timezone: TZ,
     supervisor_id: s?.dni || s?.id || "",
-    supervisor_apellido: twoApellidos(s) || s?.apellido || "",
+    supervisor_apellido: supervisorNombreCompleto(s) || s?.apellido || "",
+    supervisor_apellido_nombre: supervisorNombreCompleto(s) || s?.apellido || "",
     trabajador_id: worker.dni || worker.id,
     trabajador_apellido: twoApellidos(worker),
     trabajador_nombre: nameParts(worker).nombre || worker.nombreCompleto || worker.nombre || "",
@@ -2185,7 +2173,8 @@ async function sendLista() {
       hora_local: t.hora,
       timezone: TZ,
       supervisor_id: s.dni || s.id,
-      supervisor_apellido: twoApellidos(s),
+      supervisor_apellido: supervisorNombreCompleto(s),
+      supervisor_apellido_nombre: supervisorNombreCompleto(s),
       hizo_pedido: true,
       extra,
       trabajadores_unicos: n,
@@ -2249,7 +2238,8 @@ async function saveCierre() {
       hora_local: t.hora,
       timezone: TZ,
       supervisor_id: s.dni || s.id,
-      supervisor_apellido: twoApellidos(s),
+      supervisor_apellido: supervisorNombreCompleto(s),
+      supervisor_apellido_nombre: supervisorNombreCompleto(s),
       trabajadores_unicos: calc.trabajadores_unicos,
       pedidos_enviados: calc.pedidos_enviados,
       pedidos_pendientes: calc.pedidos_pendientes,
@@ -2723,7 +2713,6 @@ async function boot() {
   });
   window.addEventListener("online", () => {
     state.online = true;
-    refreshNetFlag();
     flushQueue().then((s) => {
       if (s?.duplicates) speak("Hoy ya envió. Solo extra.");
       else if (s?.sent) speak(`Se enviaron ${s.sent} pendientes`);
@@ -2734,12 +2723,10 @@ async function boot() {
   });
   window.addEventListener("offline", () => {
     state.online = false;
-    refreshNetFlag();
   });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
       state.online = navigator.onLine;
-      refreshNetFlag();
       store.restoreSesion().then(() => {
         if (state.view !== "welcome" && state.view !== "supervisor" && state.view !== "lock" && !supervisor()) {
           show("supervisor", { replace: true });
@@ -2752,7 +2739,6 @@ async function boot() {
   });
   window.addEventListener("pageshow", () => {
     state.online = navigator.onLine;
-    refreshNetFlag();
     store.restoreSesion().then(() => {
       flushQueue().then(() => refreshPendPill());
       if (supervisor()) syncTurnoDelDia().then(() => refreshHomeLock());

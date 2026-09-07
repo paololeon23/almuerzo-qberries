@@ -5,38 +5,41 @@
  *
  * La app de campo (Netlify) NO se toca. Sigue POSTeando { clientId, type, payload }.
  *
- * Admin (panel RH/cocina) — pegar ESTA misma URL /exec en js/config.js → apiUrl
+ * Admin (panel RH/cocina) — pegar ESTA misma URL /exec
  *   GET  /exec                      → hoy + ayer Lima  { ok, ping, reservas }
  *   GET  /exec?fecha=YYYY-MM-DD
- *   GET  /exec?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
- *   GET  /exec?path=reservas        (igual)
- *   GET  /exec?path=supervisores
- *   GET  /exec?path=comedores
- *   GET  /exec?path=turno&supervisor=DNI   → { enviado, extra_ok }  (hoy Lima)
- *   POST /exec  { dni, name, supervisor }                    → RH agrega (hoy)
- *   POST /exec  { action: "quitar", dni, date }              → RH cancela
- *   GET  /exec?action=add&dni=&name=&supervisor=             → igual (si CORS bloquea POST)
- *   GET  /exec?action=quitar&dni=&date=
+ *   GET  /exec?desde=&hasta=
+ *   GET  /exec?path=supervisores    → supervisores de hoy (hojas), no el JSON
+ *   GET  /exec?path=comedores       → comedores + fundos
+ *   GET  /exec?path=fundos
+ *   GET  /exec?path=turno&supervisor=DNI
+ *   POST { dni, apellido, nombres, supervisor, comedor, fundo } → agrega a ESA lista
+ *   POST { action: "quitar", dni, date, supervisor }           → quita
+ *   POST { action: "editar", supervisor, comedor, fundo, dni? } → cambia comedor/fundo
  *
  * Hojas: Trabajadores, Supervisores, Comidas extras.
  * hora_guardado = hora del celular. No se guarda client_id ni id de fila.
- * Quitar persona = DNI + fecha (status = cancelled). La fila no se borra.
- * Lock del turno (solo hojas, no catálogo de internet):
- *   1) ¿Este supervisor_id ya está hoy en la hoja Supervisores?
- *   2) ¿Este supervisor_id ya tiene gente hoy en la hoja Trabajadores?
- *   Si SÍ → no se escribe otra vez en Trabajadores ni en Supervisores.
- *   Solo se puede registrar en Comidas extras.
+ * trabajador_apellido y trabajador_nombre van en celdas distintas.
+ * total_comidas (hoja Supervisores) = almuerzo + extras confirmados de ese supervisor ese día.
+ * Se actualiza al enviar lista, extra, alta o quitar. Canceladas no cuentan.
+ * supervisor_apellido_nombre = nombre completo del supervisor (no solo apellidos).
+ * La columna vieja supervisor_apellido se renombra sola.
+ *
+ * Lock del turno (solo hojas):
+ *   1) ¿Este supervisor_id ya está hoy en Supervisores?
+ *   2) ¿Este supervisor_id ya tiene gente hoy en Trabajadores?
+ *   Si SÍ → no se escribe otra lista. Solo Comidas extras.
  *   Si 2 o 3 celulares mandan el mismo supervisor, el primero gana.
  *
- * Supervisores: NO son fijos. Se leen de data/supervisors.json (byDni).
- * URL por defecto = app en Netlify. Se puede cambiar en Propiedades del script → SUPERVISORS_URL.
+ * Login en el celular usa supervisors.json. Emergencia: escanear carnet.
+ * Code.gs NO valida catálogo. Guarda lo que llega del celular o del panel.
  *
- * Tras pegar: ejecutar setupSheets una vez. Opcional: seedDemoData (prueba hoy/ayer).
+ * Tras pegar: guardar. Misma URL. Ejecutar setupSheets una vez si las columnas cambiaron.
  */
 
 var CACHE_TTL_SEC = 21600;
 var ADMIN_CACHE_SEC = 4;
-var APP_VERSION = "1.2.8";
+var APP_VERSION = "1.4.2";
 var TZ = "America/Lima";
 
 var FUNDOS = ["LICAPA I", "LICAPA II", "LICAPA III"];
@@ -46,7 +49,7 @@ var COLS_TRABAJADORES = [
   "fecha_local",
   "hora_guardado",
   "supervisor_id",
-  "supervisor_apellido",
+  "supervisor_apellido_nombre",
   "trabajador_dni",
   "trabajador_apellido",
   "trabajador_nombre",
@@ -60,15 +63,13 @@ var COLS_SUPERVISORES = [
   "fecha_local",
   "hora_guardado",
   "supervisor_id",
-  "supervisor_apellido",
+  "supervisor_apellido_nombre",
   "comida",
   "comedor",
   "fundo",
   "total_comidas"
 ];
 
-var SUPERVISORS_JSON_URL = "https://almuerzo-qberries.netlify.app/data/supervisors.json";
-var SUP_CACHE_SEC = 60;
 var PACK_MEMO = {};
 
 var COMEDORES = [
@@ -86,21 +87,42 @@ function doGet(e) {
     return adminAdd({
       dni: q.dni,
       name: q.name || q.nombre,
-      supervisor: q.supervisor,
-      sede: q.sede || q.comedor
+      apellido: q.apellido || q.apellidos || q.trabajador_apellido,
+      nombres: q.nombres || q.trabajador_nombre,
+      supervisor: q.supervisor || q.supervisor_id,
+      supervisor_id: q.supervisor_id,
+      sede: q.sede || q.comedor,
+      fundo: q.fundo || q.etapa
     });
   }
   if (action === "quitar" || action === "cancel" || action === "cancelar") {
-    return adminQuitar({ dni: q.dni, date: q.date || q.fecha, id: q.id });
+    return adminQuitar({ dni: q.dni, date: q.date || q.fecha, id: q.id, supervisor: q.supervisor, supervisor_id: q.supervisor_id });
+  }
+  if (action === "editar" || action === "update" || action === "actualizar") {
+    return adminEdit({
+      dni: q.dni,
+      date: q.date || q.fecha,
+      supervisor: q.supervisor,
+      supervisor_id: q.supervisor_id,
+      sede: q.sede || q.comedor,
+      fundo: q.fundo || q.etapa,
+      comida: q.comida
+    });
   }
   if (path === "supervisores") {
-    return jsonOut({ ok: true, supervisores: loadSupervisors() });
+    return jsonOut({ ok: true, supervisores: listSupervisorsOnDuty() });
   }
-  if (path === "comedores") {
-    return jsonOut({ ok: true, comedores: COMEDORES.map(function (n) { return { name: n, sede: n }; }) });
+  if (path === "comedores" || path === "opciones") {
+    return jsonOut(catalogosAdmin());
+  }
+  if (path === "fundos" || path === "etapas") {
+    return jsonOut({ ok: true, fundos: FUNDOS.slice(), etapas: FUNDOS.slice() });
   }
   if (path === "turno" || action === "turno") {
     return turnoStatus(q);
+  }
+  if (action === "totales" || action === "recalcular" || path === "totales") {
+    return jsonOut({ ok: true, fecha: limaFecha(), totales: recalcSupervisorTotals(limaFecha()) });
   }
 
   var range = dateRangeFromQuery(q);
@@ -134,7 +156,13 @@ function doPost(e) {
   if (action === "quitar" || action === "cancel" || action === "cancelar" || body.quitar === true) {
     return adminQuitar(body);
   }
-  if (body.dni && (body.name || body.nombre || body.trabajador) && body.supervisor) {
+  if (action === "editar" || action === "update" || action === "actualizar" || action === "patch" || body.editar === true) {
+    return adminEdit(body);
+  }
+  if ((body.comedor || body.sede || body.fundo || body.etapa) && !(body.name || body.nombre || body.trabajador || body.apellido || body.nombres) && !body.payload) {
+    return adminEdit(body);
+  }
+  if (body.dni && body.supervisor && (body.name || body.nombre || body.trabajador || body.apellido || body.apellidos || body.nombres)) {
     return adminAdd(body);
   }
   if (body.dni && (body.date || body.fecha) && !body.payload) {
@@ -174,7 +202,13 @@ function workerSave(body) {
     if (!/^\d{8}$/.test(sid)) {
       return jsonOut({ ok: false, error: "sesion_invalida" });
     }
-    var sap = cell(p.supervisor_apellido, 80);
+    var sap = supervisorFullName(
+      p.supervisor_apellido_nombre,
+      p.supervisor_nombre_completo,
+      p.supervisor_apellido,
+      p.supervisor_nombres,
+      p.supervisor_nombre
+    );
     var comida = cell(p.comida, 40) || "Almuerzo";
     var comedor = canonSede(p.comedor) || cell(p.comedor, 40);
     var fundo = canonFundo(p.fundo || p.etapa || p.lote);
@@ -236,6 +270,7 @@ function workerSave(body) {
         });
       }
       if (clientId) cache.put("id:" + clientId, "1", CACHE_TTL_SEC);
+      var totalX = refreshSupervisorTotal(ss, sid, fecha, people.length);
       bumpAdminCache();
       return jsonOut({
         ok: true,
@@ -243,7 +278,7 @@ function workerSave(body) {
         extra: true,
         duplicate: false,
         trabajadores: people.length,
-        total: n
+        total: totalX
       });
     }
 
@@ -274,13 +309,14 @@ function workerSave(body) {
     });
     markSupervisorSent(sid, fecha, comida);
     if (clientId) cache.put("id:" + clientId, "1", CACHE_TTL_SEC);
+    var totalL = refreshSupervisorTotal(ss, sid, fecha, 0);
     bumpAdminCache();
     return jsonOut({
       ok: true,
       saved: true,
       duplicate: false,
       trabajadores: people.length,
-      total: n
+      total: totalL
     });
   } catch (err) {
     return jsonOut({ ok: false, error: String(err && err.message ? err.message : err) });
@@ -296,50 +332,85 @@ function adminAdd(body) {
   }
   try {
     var dni = onlyDni(body.dni || body.documento);
-    var name = String(body.name || body.nombre || body.trabajador || "").replace(/\s+/g, " ").trim();
-    var supName = String(body.supervisor || body.supervisor_name || body.supervisor_id || "").trim();
-    var sup = findSupervisor(supName);
-    if (!/^\d{8}$/.test(dni)) return jsonOut({ ok: false, error: "dni_invalido" });
-    if (!name) return jsonOut({ ok: false, error: "nombre_invalido" });
-    if (!sup) return jsonOut({ ok: false, error: "supervisor_invalido" });
-
+    var apellidoIn = String(body.apellido || body.apellidos || body.trabajador_apellido || "").replace(/\s+/g, " ").trim();
+    var nombresIn = String(body.nombres || body.trabajador_nombre || "").replace(/\s+/g, " ").trim();
+    if (!nombresIn && apellidoIn) {
+      nombresIn = String(body.nombre || "").replace(/\s+/g, " ").trim();
+    }
+    var name = String(body.name || body.trabajador || "").replace(/\s+/g, " ").trim();
+    if (!name && !apellidoIn) name = String(body.nombre || "").replace(/\s+/g, " ").trim();
+    if (!name) name = (apellidoIn + " " + nombresIn).replace(/\s+/g, " ").trim();
     var fecha = limaFecha();
-    var hora = limaHora();
-    var sede = canonSede(body.sede || body.comedor || body.hall);
-    if (!sede) sede = lastSedeForSupervisor(sup.dni, fecha);
-    if (!sede) return jsonOut({ ok: false, error: "comedor_requerido" });
-    var parts = splitName(name);
-    var active = findActiveSameDay(dni, fecha);
-    var extra = active.length > 0;
+    var sup = resolveDutySupervisor(body, fecha);
+    if (!/^\d{8}$/.test(dni)) return jsonOut({ ok: false, error: "dni_invalido" });
+    if (!name && !apellidoIn) return jsonOut({ ok: false, error: "nombre_invalido" });
+    if (!sup || !/^\d{8}$/.test(sup.dni)) {
+      return jsonOut({ ok: false, error: "supervisor_invalido" });
+    }
+
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var yaEnvio = supervisorYaRegistroHoy(ss, sup.dni, fecha);
+    var workerYa = findActiveSameDay(dni, fecha).length > 0;
+    var extra = yaEnvio || workerYa;
+    var sede = canonSede(body.sede || body.comedor || body.hall) || sup.comedor || lastSedeForSupervisor(sup.dni, fecha);
+    if (!sede) sede = "Comedor 1";
+    var fundo = canonFundo(body.fundo || body.etapa || body.lote || sup.fundo);
+    var hora = limaHora();
+    var parts = personNameParts({
+      apellido: apellidoIn,
+      nombres: nombresIn,
+      name: name
+    });
+    if (!parts.apellido && !parts.nombre) return jsonOut({ ok: false, error: "nombre_invalido" });
+    name = (parts.apellido + " " + parts.nombre).replace(/\s+/g, " ").trim();
+    var sap = supervisorFullName(sup.name, sup.nombre, sup.apellido);
     var pack = ensurePersonSheet(ss, extra ? "Comidas extras" : "Trabajadores");
     appendReserva(pack, {
       fecha: fecha,
       hora: hora,
       sid: sup.dni,
-      sap: twoApellidos(sup.name),
+      sap: sap,
       dni: dni,
       apellido: parts.apellido,
       nombre: parts.nombre,
       comida: "Almuerzo",
       comedor: sede,
-      fundo: canonFundo(body.fundo || body.etapa || body.lote),
+      fundo: fundo,
       status: "confirmed"
     });
+    if (!yaEnvio && !extra) {
+      appendSupervisor(ensureSupervisorSheet(ss), {
+        fecha: fecha,
+        hora: hora,
+        sid: sup.dni,
+        sap: sap,
+        comida: "Almuerzo",
+        comedor: sede,
+        fundo: fundo,
+        total: 1
+      });
+      markSupervisorSent(sup.dni, fecha, "Almuerzo");
+    }
+    var totalAdd = refreshSupervisorTotal(ss, sup.dni, fecha, extra || yaEnvio ? 1 : 0);
     bumpAdminCache();
     return jsonOut({
       ok: true,
       saved: true,
       extra: extra,
+      total: totalAdd,
       reserva: {
         id: dni,
         dni: dni,
         name: name,
+        apellido: parts.apellido,
+        nombre: parts.nombre,
         date: fecha,
         time: hora,
-        supervisor: sup.name,
+        supervisor: titleCase(sap) || sup.dni,
+        supervisor_id: sup.dni,
         sede: sede,
         extra: extra,
+        tipo: extra ? "extra" : "lista",
         status: "confirmed"
       }
     });
@@ -363,16 +434,109 @@ function adminQuitar(body) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return jsonOut({ ok: false, error: "fecha_invalida" });
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sup = resolveDutySupervisor(body, fecha);
+    var sid = sup && sup.dni ? sup.dni : onlyDni(body.supervisor_id || "");
     var hits = 0;
-    hits += cancelInSheet(ensurePersonSheet(ss, "Trabajadores"), dni, fecha, id);
-    hits += cancelInSheet(ensurePersonSheet(ss, "Comidas extras"), dni, fecha, id);
+    hits += cancelInSheet(ensurePersonSheet(ss, "Trabajadores"), dni, fecha, id, sid);
+    hits += cancelInSheet(ensurePersonSheet(ss, "Comidas extras"), dni, fecha, id, sid);
+    if (!/^\d{8}$/.test(sid)) sid = sidForWorkerDay(ss, dni || id, fecha);
+    var totalQ = /^\d{8}$/.test(sid) ? refreshSupervisorTotal(ss, sid, fecha, -hits) : 0;
     bumpAdminCache();
-    return jsonOut({ ok: true, saved: true, cancelled: hits });
+    return jsonOut({ ok: true, saved: true, cancelled: hits, total: totalQ });
   } catch (err) {
     return jsonOut({ ok: false, error: String(err && err.message ? err.message : err) });
   } finally {
     lock.releaseLock();
   }
+}
+
+function catalogosAdmin() {
+  return {
+    ok: true,
+    comedores: COMEDORES.map(function (n) { return { name: n, sede: n }; }),
+    fundos: FUNDOS.slice(),
+    etapas: FUNDOS.slice()
+  };
+}
+
+function adminEdit(body) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(8000)) {
+    return jsonOut({ ok: false, error: "lock_timeout" });
+  }
+  try {
+    var fecha = String(body.date || body.fecha || limaFecha()).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) fecha = limaFecha();
+    var dni = onlyDni(body.dni || body.documento);
+    var sup = resolveDutySupervisor(body, fecha);
+    var sid = (sup && sup.dni) || onlyDni(body.supervisor_id || "");
+    var sedeIn = String(body.sede || body.comedor || body.hall || "").trim();
+    var fundoIn = String(body.fundo || body.etapa || body.lote || "").trim();
+    var comidaIn = String(body.comida || "").trim();
+    var patch = {
+      sede: sedeIn ? canonSede(sedeIn) : "",
+      fundo: fundoIn ? canonFundo(fundoIn) : "",
+      comida: comidaIn ? cell(comidaIn, 40) : ""
+    };
+    if (!patch.sede && !patch.fundo && !patch.comida) {
+      return jsonOut({ ok: false, error: "sin_cambios" });
+    }
+    if (!/^\d{8}$/.test(dni) && !/^\d{8}$/.test(sid)) {
+      return jsonOut({ ok: false, error: "supervisor_invalido" });
+    }
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var n = 0;
+    n += patchSheetRows(ensurePersonSheet(ss, "Trabajadores"), fecha, sid, dni, patch, true);
+    n += patchSheetRows(ensurePersonSheet(ss, "Comidas extras"), fecha, sid, dni, patch, true);
+    n += patchSheetRows(ensureSupervisorSheet(ss), fecha, sid, "", patch, false);
+    bumpAdminCache();
+    return jsonOut({
+      ok: true,
+      saved: true,
+      updated: n,
+      comedor: patch.sede || undefined,
+      fundo: patch.fundo || undefined,
+      etapa: patch.fundo || undefined,
+      comida: patch.comida || undefined
+    });
+  } catch (err) {
+    return jsonOut({ ok: false, error: String(err && err.message ? err.message : err) });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function patchSheetRows(pack, fecha, sid, dni, patch, peopleSheet) {
+  var sh = pack.sh;
+  var last = sh.getLastRow();
+  if (last < 2) return 0;
+  var lastCol = Math.max(sh.getLastColumn(), pack.width || 1);
+  var start = Math.max(2, last - 1999);
+  var values = sh.getRange(start, 1, last - start + 1, lastCol).getValues();
+  var n = 0;
+  var dirty = false;
+  for (var i = 0; i < values.length; i++) {
+    var row = values[i];
+    if (!fechaEs(val(pack, row, "fecha_local"), fecha)) continue;
+    if (peopleSheet && /^\d{8}$/.test(dni) && onlyDni(val(pack, row, "trabajador_dni")) !== dni) continue;
+    if (/^\d{8}$/.test(sid) && onlyDni(val(pack, row, "supervisor_id")) !== sid) continue;
+    if (peopleSheet && normStatus(val(pack, row, "status")) === "cancelled") continue;
+    if (patch.sede && pack.map.comedor) {
+      row[pack.map.comedor - 1] = patch.sede;
+      dirty = true;
+    }
+    if (patch.fundo && pack.map.fundo) {
+      row[pack.map.fundo - 1] = patch.fundo;
+      dirty = true;
+    }
+    if (patch.comida && pack.map.comida) {
+      row[pack.map.comida - 1] = patch.comida;
+      dirty = true;
+    }
+    n += 1;
+  }
+  if (dirty) sh.getRange(start, 1, values.length, lastCol).setValues(values);
+  return n;
 }
 
 function listReservas(desde, hasta) {
@@ -409,8 +573,9 @@ function readSheetReservas(pack, fromExtra, desde, hasta) {
     var extra = fromExtra || isExtraFlag(val(pack, row, "extra"));
     if (status === "cancelled") extra = false;
     var sid = onlyDni(val(pack, row, "supervisor_id"));
-    var sap = String(val(pack, row, "supervisor_apellido") || "").trim();
+    var sap = valSupName(pack, row);
     var sede = canonSede(val(pack, row, "comedor"));
+    var fundo = canonFundo(val(pack, row, "fundo") || val(pack, row, "etapa"));
     var supervisor = titleCase(sap) || sid;
     if (!supervisor || !sede) continue;
     var apellido = String(val(pack, row, "trabajador_apellido") || "").trim();
@@ -421,11 +586,18 @@ function readSheetReservas(pack, fromExtra, desde, hasta) {
       id: dni,
       dni: dni,
       name: name,
+      apellido: apellido,
+      nombre: nombre,
       date: fecha,
       time: normHora(val(pack, row, "hora_guardado")),
       supervisor: supervisor,
+      supervisor_id: sid,
       sede: sede,
+      comedor: sede,
+      fundo: fundo,
+      etapa: fundo,
       extra: extra,
+      tipo: extra ? "extra" : "lista",
       status: status
     });
   }
@@ -444,14 +616,12 @@ function dedupeActivas(list) {
     var key = r.dni + "|" + r.date;
     if (!seen[key]) {
       seen[key] = true;
-      if (r.extra) {
-        r = copyRsv(r);
-        r.extra = false;
-      }
+      r = copyRsv(r);
       out.push(r);
     } else {
       r = copyRsv(r);
       r.extra = true;
+      r.tipo = "extra";
       out.push(r);
     }
   }
@@ -463,11 +633,18 @@ function copyRsv(r) {
     id: r.id,
     dni: r.dni,
     name: r.name,
+    apellido: r.apellido || "",
+    nombre: r.nombre || "",
     date: r.date,
     time: r.time,
     supervisor: r.supervisor,
+    supervisor_id: r.supervisor_id || "",
     sede: r.sede,
-    extra: r.extra,
+    comedor: r.comedor || r.sede,
+    fundo: r.fundo || r.etapa || "",
+    etapa: r.etapa || r.fundo || "",
+    extra: !!r.extra,
+    tipo: r.extra ? "extra" : "lista",
     status: r.status
   };
 }
@@ -481,7 +658,7 @@ function findActiveSameDay(dni, fecha) {
   return hits;
 }
 
-function cancelInSheet(pack, dni, fecha, id) {
+function cancelInSheet(pack, dni, fecha, id, sid) {
   var sh = pack.sh;
   var last = sh.getLastRow();
   if (last < 2) return 0;
@@ -490,15 +667,17 @@ function cancelInSheet(pack, dni, fecha, id) {
   var values = sh.getRange(start, 1, last - start + 1, lastCol).getValues();
   var colStatus = pack.map.status || lastCol;
   var n = 0;
+  var wantSid = onlyDni(sid);
   for (var i = 0; i < values.length; i++) {
     var row = values[i];
     var rowFecha = normFecha(val(pack, row, "fecha_local"));
     var rowDni = onlyDni(val(pack, row, "trabajador_dni"));
     var wantDni = onlyDni(dni || id);
     var match = false;
-    if (wantDni && /^\d{8}$/.test(wantDni) && rowDni === wantDni && rowFecha === fecha) match = true;
+    if (wantDni && /^\d{8}$/.test(wantDni) && rowDni === wantDni && fechaEs(val(pack, row, "fecha_local"), fecha)) match = true;
     else if (id && String(val(pack, row, "id") || "").trim() === id) match = true;
     if (!match) continue;
+    if (/^\d{8}$/.test(wantSid) && onlyDni(val(pack, row, "supervisor_id")) !== wantSid) continue;
     if (normStatus(val(pack, row, "status")) === "cancelled") continue;
     sh.getRange(start + i, colStatus).setValue("cancelled");
     n += 1;
@@ -555,7 +734,7 @@ function supervisorIdEnHojaSupervisores(ss, sid, fecha) {
   var values = sh.getRange(start, 1, last - start + 1, lastCol).getValues();
   for (var i = values.length - 1; i >= 0; i--) {
     var row = values[i];
-    if (normFecha(val(pack, row, "fecha_local")) !== fecha) continue;
+    if (!fechaEs(val(pack, row, "fecha_local"), fecha)) continue;
     if (onlyDni(val(pack, row, "supervisor_id")) === sid) return true;
   }
   return false;
@@ -570,7 +749,7 @@ function supervisorSentInPeople(pack, sid, fecha) {
   var values = sh.getRange(start, 1, last - start + 1, lastCol).getValues();
   for (var i = values.length - 1; i >= 0; i--) {
     var row = values[i];
-    if (normFecha(val(pack, row, "fecha_local")) !== fecha) continue;
+    if (!fechaEs(val(pack, row, "fecha_local"), fecha)) continue;
     if (onlyDni(val(pack, row, "supervisor_id")) !== sid) continue;
     if (normStatus(val(pack, row, "status")) === "cancelled") continue;
     return true;
@@ -582,14 +761,15 @@ function writePeople(pack, people, meta) {
   var rows = [];
   for (var i = 0; i < people.length; i++) {
     var w = people[i] || {};
+    var parts = personNameParts(w);
     rows.push(reservaRow(pack, {
       fecha: meta.fecha,
       hora: meta.hora,
       sid: meta.sid,
       sap: meta.sap,
       dni: cell(w.id || w.dni, 12),
-      apellido: cell(w.apellido, 80),
-      nombre: cell(w.nombre, 80),
+      apellido: cell(parts.apellido, 80),
+      nombre: cell(parts.nombre, 80),
       comida: meta.comida,
       comedor: meta.comedor,
       fundo: meta.fundo,
@@ -608,13 +788,130 @@ function appendSupervisor(pack, rec) {
   pack.sh.getRange(pack.sh.getLastRow() + 1, 1, 1, pack.width).setValues([supervisorRow(pack, rec)]);
 }
 
+function sidForWorkerDay(ss, dni, fecha) {
+  var want = onlyDni(dni);
+  if (!/^\d{8}$/.test(want) || !fecha) return "";
+  var packs = [
+    ensurePersonSheet(ss, "Trabajadores"),
+    ensurePersonSheet(ss, "Comidas extras")
+  ];
+  for (var p = 0; p < packs.length; p++) {
+    var pack = packs[p];
+    var sh = pack.sh;
+    var last = sh.getLastRow();
+    if (last < 2) continue;
+    var lastCol = Math.max(sh.getLastColumn(), COLS_TRABAJADORES.length);
+    var start = Math.max(2, last - 3999);
+    var values = sh.getRange(start, 1, last - start + 1, lastCol).getValues();
+    for (var i = values.length - 1; i >= 0; i--) {
+      var row = values[i];
+      if (!fechaEs(val(pack, row, "fecha_local"), fecha)) continue;
+      if (onlyDni(val(pack, row, "trabajador_dni")) !== want) continue;
+      var sid = onlyDni(val(pack, row, "supervisor_id"));
+      if (/^\d{8}$/.test(sid)) return sid;
+    }
+  }
+  return "";
+}
+
+function countActiveMeals(pack, sid, fecha) {
+  var sh = pack.sh;
+  var last = sh.getLastRow();
+  if (last < 2) return 0;
+  var lastCol = Math.max(sh.getLastColumn(), COLS_TRABAJADORES.length);
+  var start = Math.max(2, last - 3999);
+  var values = sh.getRange(start, 1, last - start + 1, lastCol).getValues();
+  var n = 0;
+  for (var i = 0; i < values.length; i++) {
+    var row = values[i];
+    if (!fechaEs(val(pack, row, "fecha_local"), fecha)) continue;
+    if (onlyDni(val(pack, row, "supervisor_id")) !== sid) continue;
+    if (normStatus(val(pack, row, "status")) === "cancelled") continue;
+    if (!/^\d{8}$/.test(onlyDni(val(pack, row, "trabajador_dni")))) continue;
+    n += 1;
+  }
+  return n;
+}
+
+function numTotal(v) {
+  var n = Number(v);
+  return isFinite(n) ? n : 0;
+}
+
+function refreshSupervisorTotal(ss, sid, fecha, delta) {
+  if (!/^\d{8}$/.test(sid) || !fecha) return 0;
+  SpreadsheetApp.flush();
+  var counted = countActiveMeals(ensurePersonSheet(ss, "Trabajadores"), sid, fecha)
+    + countActiveMeals(ensurePersonSheet(ss, "Comidas extras"), sid, fecha);
+  var pack = ensureSupervisorSheet(ss);
+  var sh = pack.sh;
+  var last = sh.getLastRow();
+  if (last < 2) return Math.max(counted, Number(delta) || 0);
+  var col = pack.map.total_comidas;
+  if (!col) return Math.max(counted, Number(delta) || 0);
+  var lastCol = Math.max(sh.getLastColumn(), COLS_SUPERVISORES.length);
+  var start = Math.max(2, last - 799);
+  var values = sh.getRange(start, 1, last - start + 1, lastCol).getValues();
+  var stored = 0;
+  var hits = [];
+  var lastSid = -1;
+  for (var i = 0; i < values.length; i++) {
+    var row = values[i];
+    if (onlyDni(val(pack, row, "supervisor_id")) !== sid) continue;
+    lastSid = i;
+    if (!fechaEs(val(pack, row, "fecha_local"), fecha)) continue;
+    stored = numTotal(val(pack, row, "total_comidas"));
+    hits.push(i);
+  }
+  if (!hits.length && lastSid >= 0) {
+    stored = numTotal(val(pack, values[lastSid], "total_comidas"));
+    hits.push(lastSid);
+  }
+  var bump = Number(delta) || 0;
+  var total = stored;
+  if (bump > 0) total = Math.max(stored + bump, counted);
+  else if (bump < 0) total = Math.max(0, stored + bump);
+  else total = Math.max(counted, stored);
+  if (counted > total) total = counted;
+  for (var h = 0; h < hits.length; h++) {
+    values[hits[h]][col - 1] = total;
+  }
+  if (hits.length) sh.getRange(start, 1, values.length, lastCol).setValues(values);
+  return total;
+}
+
+function recalcSupervisorTotals(fecha) {
+  var day = fecha || limaFecha();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var pack = ensureSupervisorSheet(ss);
+  var sh = pack.sh;
+  var last = sh.getLastRow();
+  if (last < 2) return [];
+  var lastCol = Math.max(sh.getLastColumn(), COLS_SUPERVISORES.length);
+  var start = Math.max(2, last - 799);
+  var values = sh.getRange(start, 1, last - start + 1, lastCol).getValues();
+  var seen = {};
+  var out = [];
+  for (var i = values.length - 1; i >= 0; i--) {
+    var sid = onlyDni(val(pack, values[i], "supervisor_id"));
+    if (!/^\d{8}$/.test(sid) || seen[sid]) continue;
+    if (!fechaEs(val(pack, values[i], "fecha_local"), day)) continue;
+    seen[sid] = true;
+    out.push({
+      supervisor_id: sid,
+      total_comidas: refreshSupervisorTotal(ss, sid, day, 0)
+    });
+  }
+  return out;
+}
+
 function supervisorRow(pack, rec) {
   var row = [];
   for (var i = 0; i < pack.width; i++) row.push("");
-  setCol(pack, row, "fecha_local", rec.fecha);
+  setCol(pack, row, "fecha_local", fechaCell(rec.fecha));
   setCol(pack, row, "hora_guardado", rec.hora);
   setCol(pack, row, "supervisor_id", rec.sid);
-  setCol(pack, row, "supervisor_apellido", rec.sap);
+  setCol(pack, row, "supervisor_apellido_nombre", rec.sap);
   setCol(pack, row, "comida", rec.comida);
   setCol(pack, row, "comedor", rec.comedor);
   setCol(pack, row, "fundo", rec.fundo);
@@ -625,10 +922,10 @@ function supervisorRow(pack, rec) {
 function reservaRow(pack, rec) {
   var row = [];
   for (var i = 0; i < pack.width; i++) row.push("");
-  setCol(pack, row, "fecha_local", rec.fecha);
+  setCol(pack, row, "fecha_local", fechaCell(rec.fecha));
   setCol(pack, row, "hora_guardado", rec.hora);
   setCol(pack, row, "supervisor_id", rec.sid);
-  setCol(pack, row, "supervisor_apellido", rec.sap);
+  setCol(pack, row, "supervisor_apellido_nombre", rec.sap);
   setCol(pack, row, "trabajador_dni", rec.dni);
   setCol(pack, row, "trabajador_apellido", rec.apellido);
   setCol(pack, row, "trabajador_nombre", rec.nombre);
@@ -651,6 +948,20 @@ function val(pack, row, name) {
   return row[col - 1];
 }
 
+function valSupName(pack, row) {
+  return String(val(pack, row, "supervisor_apellido_nombre") || val(pack, row, "supervisor_apellido") || "").trim();
+}
+
+function supervisorFullName() {
+  var best = "";
+  for (var i = 0; i < arguments.length; i++) {
+    var s = String(arguments[i] == null ? "" : arguments[i]).replace(/\s+/g, " ").trim();
+    if (!s || /^\d{8}$/.test(onlyDni(s))) continue;
+    if (s.length > best.length) best = s;
+  }
+  return cell(best, 80).toUpperCase();
+}
+
 function dropUnusedCols(sh) {
   var lastCol = sh.getLastColumn();
   if (lastCol < 1) return;
@@ -670,6 +981,14 @@ function headerIndex(sh) {
     if (key) map[key] = i;
   }
   return map;
+}
+
+function migrateSupervisorNameHeader(sh) {
+  var map = headerIndex(sh);
+  if (map.supervisor_apellido_nombre != null) return;
+  if (map.supervisor_apellido != null) {
+    sh.getRange(1, map.supervisor_apellido + 1).setValue("supervisor_apellido_nombre").setFontWeight("bold");
+  }
 }
 
 function migrateFundoHeader(sh) {
@@ -699,6 +1018,7 @@ function mapFromHeaders(hdrs) {
 
 function headersNeedFix(map, headers) {
   if (!map.fundo) return true;
+  if (!map.supervisor_apellido_nombre) return true;
   var i;
   for (i = 0; i < headers.length; i++) {
     if (!map[headers[i]]) return true;
@@ -725,6 +1045,7 @@ function ensureNamedSheet(ss, name, headers) {
   var map = mapFromHeaders(hdrs);
   if (headersNeedFix(map, headers)) {
     migrateFundoHeader(sh);
+    migrateSupervisorNameHeader(sh);
     dropUnusedCols(sh);
     lastCol = Math.max(sh.getLastColumn(), 1);
     hdrs = sh.getRange(1, 1, 1, lastCol).getValues()[0];
@@ -751,81 +1072,145 @@ function ensureSupervisorSheet(ss) {
   return ensureNamedSheet(ss, "Supervisores", COLS_SUPERVISORES);
 }
 
-function supervisorsUrl() {
-  try {
-    var u = PropertiesService.getScriptProperties().getProperty("SUPERVISORS_URL");
-    if (u && String(u).trim()) return String(u).trim();
-  } catch (e) { /* default */ }
-  return SUPERVISORS_JSON_URL;
+function namesMatch(a, b) {
+  var fa = fold(a);
+  var fb = fold(b);
+  if (!fa || !fb) return false;
+  if (fa === fb) return true;
+  var ta = fold(twoApellidos(a));
+  var tb = fold(twoApellidos(b));
+  if (ta && tb && ta === tb) return true;
+  if (fa.indexOf(fb) === 0 || fb.indexOf(fa) === 0) return true;
+  if (ta && fb.indexOf(ta) === 0) return true;
+  if (tb && fa.indexOf(tb) === 0) return true;
+  return false;
 }
 
-function loadSupervisors() {
-  var cache = CacheService.getScriptCache();
-  var hit = cache.get("supcat");
-  if (hit) {
-    try { return JSON.parse(hit); } catch (e) { /* sigue */ }
-  }
-  var list = fetchSupervisors();
-  try { cache.put("supcat", JSON.stringify(list), SUP_CACHE_SEC); } catch (e2) { /* ignore */ }
-  return list;
+function hitFromRow(pack, row) {
+  var sid = onlyDni(val(pack, row, "supervisor_id"));
+  if (!/^\d{8}$/.test(sid)) return null;
+  var sap = valSupName(pack, row);
+  return {
+    dni: sid,
+    name: sap || sid,
+    nombre: (sap || sid).toUpperCase(),
+    comedor: canonSede(val(pack, row, "comedor")),
+    fundo: canonFundo(val(pack, row, "fundo") || val(pack, row, "etapa"))
+  };
 }
 
-function fetchSupervisors() {
-  var data = {};
-  try {
-    var res = UrlFetchApp.fetch(supervisorsUrl(), {
-      muteHttpExceptions: true,
-      followRedirects: true,
-      headers: { "Cache-Control": "no-cache" }
-    });
-    if (res.getResponseCode() >= 400) return [];
-    data = JSON.parse(res.getContentText() || "{}");
-  } catch (err) {
-    return [];
+function supervisorOnDutyToday(digits, raw, fecha) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var packs = [
+    ensureSupervisorSheet(ss),
+    ensurePersonSheet(ss, "Trabajadores"),
+    ensurePersonSheet(ss, "Comidas extras")
+  ];
+  var day = fecha || limaFecha();
+  for (var p = 0; p < packs.length; p++) {
+    var pack = packs[p];
+    var sh = pack.sh;
+    var last = sh.getLastRow();
+    if (last < 2) continue;
+    var lastCol = Math.max(sh.getLastColumn(), 1);
+    var start = Math.max(2, last - 1999);
+    var values = sh.getRange(start, 1, last - start + 1, lastCol).getValues();
+    for (var i = values.length - 1; i >= 0; i--) {
+      var row = values[i];
+      if (!fechaEs(val(pack, row, "fecha_local"), day)) continue;
+      var hit = hitFromRow(pack, row);
+      if (!hit) continue;
+      if (digits && hit.dni === digits) return hit;
+      if (raw && namesMatch(hit.name, raw)) return hit;
+    }
   }
+  return null;
+}
+
+function listSupervisorsOnDuty(fecha) {
+  var day = fecha || limaFecha();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var packs = [
+    ensureSupervisorSheet(ss),
+    ensurePersonSheet(ss, "Trabajadores"),
+    ensurePersonSheet(ss, "Comidas extras")
+  ];
   var seen = {};
   var list = [];
-
-  function add(dni, nombre, cargo) {
-    var id = onlyDni(dni);
-    var raw = String(nombre || "").replace(/\s+/g, " ").trim();
-    if (!/^\d{8}$/.test(id) || !raw || seen[id]) return;
-    seen[id] = true;
-    list.push({
-      dni: id,
-      name: titleCase(raw),
-      nombre: raw.toUpperCase(),
-      cargo: String(cargo || "")
-    });
-  }
-
-  var byDni = data.byDni && typeof data.byDni === "object" ? data.byDni : {};
-  for (var dni in byDni) {
-    if (!byDni.hasOwnProperty(dni)) continue;
-    var row = byDni[dni] || {};
-    add(dni, row.nombre || row.name, row.cargo);
-  }
-  var arr = data.supervisores || data.supervisors || [];
-  if (Object.prototype.toString.call(arr) === "[object Array]") {
-    for (var i = 0; i < arr.length; i++) {
-      var s = arr[i] || {};
-      add(s.dni || s.id, s.nombre || s.name, s.cargo);
+  for (var p = 0; p < packs.length; p++) {
+    var pack = packs[p];
+    var sh = pack.sh;
+    var last = sh.getLastRow();
+    if (last < 2) continue;
+    var lastCol = Math.max(sh.getLastColumn(), 1);
+    var start = Math.max(2, last - 1999);
+    var values = sh.getRange(start, 1, last - start + 1, lastCol).getValues();
+    for (var i = values.length - 1; i >= 0; i--) {
+      var row = values[i];
+      if (!fechaEs(val(pack, row, "fecha_local"), day)) continue;
+      var hit = hitFromRow(pack, row);
+      if (!hit || seen[hit.dni]) continue;
+      seen[hit.dni] = true;
+      list.push({
+        dni: hit.dni,
+        name: titleCase(hit.name) || hit.dni,
+        nombre: (hit.nombre || hit.name || "").toUpperCase(),
+        sede: hit.comedor || "",
+        fundo: hit.fundo || "",
+        cargo: "Supervisor"
+      });
     }
   }
   return list;
 }
 
-function findSupervisor(raw) {
-  var key = fold(raw);
-  if (!key) return null;
-  var digits = onlyDni(raw);
-  var list = loadSupervisors();
-  for (var i = 0; i < list.length; i++) {
-    var s = list[i];
-    if (digits && s.dni === digits) return s;
-    if (fold(s.name) === key) return s;
-    if (fold(s.nombre) === key) return s;
-    if (fold(twoApellidos(s.name)) === key) return s;
+function resolveDutySupervisor(body, fecha) {
+  body = body || {};
+  var raw = String(body.supervisor || body.supervisor_name || body.supervisor_id || "").trim();
+  var digits = onlyDni(body.supervisor_id || body.supervisor_dni || raw);
+  var fromSheet = supervisorOnDutyToday(digits, raw, fecha);
+  if (fromSheet) return fromSheet;
+  fromSheet = findSupervisorOnDuty(digits, fold(raw));
+  if (fromSheet) return fromSheet;
+  if (/^\d{8}$/.test(digits)) {
+    var label = raw && !/^\d{8}$/.test(onlyDni(raw)) ? String(raw).replace(/\s+/g, " ").trim() : digits;
+    return {
+      dni: digits,
+      name: label || digits,
+      nombre: (label || digits).toUpperCase()
+    };
+  }
+  return null;
+}
+
+function findSupervisorOnDuty(digits, key) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var packs = [
+    ensurePersonSheet(ss, "Trabajadores"),
+    ensurePersonSheet(ss, "Comidas extras"),
+    ensureSupervisorSheet(ss)
+  ];
+  var hoy = limaFecha();
+  var ayer = addDays(hoy, -1);
+  for (var p = 0; p < packs.length; p++) {
+    var pack = packs[p];
+    var sh = pack.sh;
+    var last = sh.getLastRow();
+    if (last < 2) continue;
+    var lastCol = Math.max(sh.getLastColumn(), 1);
+    var start = Math.max(2, last - 1999);
+    var values = sh.getRange(start, 1, last - start + 1, lastCol).getValues();
+    for (var i = values.length - 1; i >= 0; i--) {
+      var row = values[i];
+      if (!fechaEs(val(pack, row, "fecha_local"), hoy) && !fechaEs(val(pack, row, "fecha_local"), ayer)) continue;
+      var sid = onlyDni(val(pack, row, "supervisor_id"));
+      if (!/^\d{8}$/.test(sid)) continue;
+      var sap = valSupName(pack, row);
+      var label = titleCase(sap) || sid;
+      if ((digits && sid === digits) || (key && namesMatch(sap, key)) || (key && namesMatch(label, key))) {
+        return { dni: sid, name: label, nombre: (sap || label).toUpperCase() };
+      }
+    }
   }
   return null;
 }
@@ -834,11 +1219,15 @@ function lastSedeForSupervisor(dni, fecha) {
   var list = listReservas(fecha, fecha);
   for (var i = list.length - 1; i >= 0; i--) {
     var r = list[i];
-    if (r.status === "cancelled") continue;
-    var sup = findSupervisor(r.supervisor);
-    if (sup && sup.dni === dni && r.sede) return r.sede;
+    if (r.status === "cancelled" || !r.sede) continue;
+    if (onlyDni(r.supervisor_id) === dni) return r.sede;
   }
-  return "";
+  var hit = supervisorOnDutyToday(dni, "", fecha);
+  return (hit && hit.comedor) ? hit.comedor : "";
+}
+
+function findSupervisor(raw) {
+  return resolveDutySupervisor({ supervisor: raw, supervisor_id: onlyDni(raw) }, limaFecha());
 }
 
 function dateRangeFromQuery(q) {
@@ -862,6 +1251,22 @@ function limaHora() {
   return Utilities.formatDate(new Date(), TZ, "HH:mm");
 }
 
+function fechaCell(iso) {
+  var s = String(iso || "").slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? "'" + s : s;
+}
+
+function pad2(n) {
+  return ("0" + n).slice(-2);
+}
+
+function fechaEs(v, fecha) {
+  if (!fecha) return false;
+  if (String(v || "").indexOf(fecha) >= 0) return true;
+  var n = normFecha(v);
+  return n === fecha;
+}
+
 function addDays(iso, delta) {
   var p = iso.split("-");
   var d = new Date(Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2])));
@@ -870,8 +1275,22 @@ function addDays(iso, delta) {
 }
 
 function normFecha(v) {
+  var hoy = limaFecha();
   if (Object.prototype.toString.call(v) === "[object Date]" && !isNaN(v.getTime())) {
-    return Utilities.formatDate(v, TZ, "yyyy-MM-dd");
+    var opts = [
+      Utilities.formatDate(v, TZ, "yyyy-MM-dd"),
+      Utilities.formatDate(v, "UTC", "yyyy-MM-dd"),
+      v.getUTCFullYear() + "-" + pad2(v.getUTCMonth() + 1) + "-" + pad2(v.getUTCDate()),
+      v.getFullYear() + "-" + pad2(v.getMonth() + 1) + "-" + pad2(v.getDate())
+    ];
+    try {
+      opts.push(Utilities.formatDate(v, SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), "yyyy-MM-dd"));
+    } catch (e1) { /* ignore */ }
+    var i;
+    for (i = 0; i < opts.length; i++) {
+      if (opts[i] === hoy) return hoy;
+    }
+    return opts[0] || "";
   }
   var s = String(v || "").trim();
   var m = s.match(/(\d{4}-\d{2}-\d{2})/);
@@ -947,10 +1366,36 @@ function onlyDni(raw) {
   return s;
 }
 
+function personNameParts(w) {
+  w = w || {};
+  var ap = String(w.apellido || w.apellidos || w.trabajador_apellido || "").replace(/\s+/g, " ").trim();
+  var no = String(w.nombres || w.trabajador_nombre || "").replace(/\s+/g, " ").trim();
+  if (!no) no = String(w.nombre || "").replace(/\s+/g, " ").trim();
+  var full = String(w.name || w.nombreCompleto || w.trabajador || "").replace(/\s+/g, " ").trim();
+  if (ap) {
+    if (full && !no) {
+      var head = ap.toUpperCase();
+      var blob = full.toUpperCase();
+      if (blob.indexOf(head) === 0) no = full.slice(ap.length).replace(/\s+/g, " ").trim();
+      else no = full;
+    }
+    return { apellido: ap.toUpperCase(), nombre: no.toUpperCase() };
+  }
+  if (full) {
+    var p = splitName(full);
+    return { apellido: p.apellido, nombre: String(p.nombre || "").toUpperCase() };
+  }
+  if (no) {
+    var p2 = splitName(no);
+    return { apellido: p2.apellido, nombre: String(p2.nombre || "").toUpperCase() };
+  }
+  return { apellido: "", nombre: "" };
+}
+
 function splitName(full) {
   var parts = String(full || "").replace(/\s+/g, " ").trim().split(" ");
   if (parts.length >= 2) {
-    return { apellido: (parts[0] + " " + parts[1]).toUpperCase(), nombre: parts.slice(2).join(" ") };
+    return { apellido: (parts[0] + " " + parts[1]).toUpperCase(), nombre: parts.slice(2).join(" ").toUpperCase() };
   }
   return { apellido: String(parts[0] || "").toUpperCase(), nombre: "" };
 }
@@ -1020,99 +1465,4 @@ function setupSheets() {
   ensurePersonSheet(ss, "Trabajadores");
   ensurePersonSheet(ss, "Comidas extras");
   ensureSupervisorSheet(ss);
-}
-
-function seedDemoData() {
-  setupSheets();
-  var hoy = limaFecha();
-  var ayer = addDays(hoy, -1);
-  var cats = loadSupervisors();
-  if (!cats.length) throw new Error("No se pudo leer supervisors.json");
-  var samples = [
-    { dni: "46426978", name: "Burgos Vásquez Ebelio" },
-    { dni: "40112233", name: "Lopez Diaz Carla" },
-    { dni: "40223344", name: "Ramos Quispe Julio" },
-    { dni: "40334455", name: "Torres Vega Ana" },
-    { dni: "40445566", name: "Huaman Cruz Pedro" },
-    { dni: "40556677", name: "Salazar Pineda Rosa" },
-    { dni: "40667788", name: "Cueva Rojas Mario" },
-    { dni: "40778899", name: "Nieto Campos Lucia" },
-    { dni: "40889900", name: "Paredes Soto Kevin" }
-  ];
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var packT = ensurePersonSheet(ss, "Trabajadores");
-  var packX = ensurePersonSheet(ss, "Comidas extras");
-
-  function put(pack, day, time, sample, extra, status, idx) {
-    var sup = cats[idx % cats.length];
-    var parts = splitName(sample.name);
-    appendReserva(pack, {
-      fecha: day,
-      hora: time,
-      sid: sup.dni,
-      sap: twoApellidos(sup.name),
-      dni: sample.dni,
-      apellido: parts.apellido,
-      nombre: parts.nombre,
-      comida: "Almuerzo",
-      comedor: COMEDORES[idx % COMEDORES.length],
-      fundo: "LICAPA I",
-      status: status
-    });
-  }
-
-  for (var d = 0; d < 2; d++) {
-    var day = d === 0 ? hoy : ayer;
-    for (var i = 0; i < samples.length; i++) {
-      put(packT, day, "06:0" + (i % 6), samples[i], false, "confirmed", i);
-    }
-    put(packX, day, "07:10", samples[0], true, "confirmed", 0);
-    put(packX, day, "07:40", samples[1], true, "confirmed", 1);
-    put(packT, day, "08:15", { dni: "40990011", name: "Medina Alva Jorge" }, false, "pending", 4);
-    put(packT, day, "05:50", { dni: "40101010", name: "Cancelado Prueba Uno" }, false, "cancelled", 0);
-  }
-  bumpAdminCache();
-}
-
-function verifyDayCounts() {
-  var hoy = limaFecha();
-  var ayer = addDays(hoy, -1);
-  return {
-    hoy: tally(listReservas(hoy, hoy)),
-    ayer: tally(listReservas(ayer, ayer))
-  };
-}
-
-function tally(list) {
-  var regular = 0;
-  var extras = 0;
-  var cancelled = 0;
-  var pending = 0;
-  var bySede = {};
-  for (var i = 0; i < list.length; i++) {
-    var r = list[i];
-    if (r.status === "cancelled") {
-      cancelled += 1;
-      continue;
-    }
-    if (r.status === "pending") pending += 1;
-    if (r.extra) extras += 1;
-    else regular += 1;
-    if (!bySede[r.sede]) bySede[r.sede] = 0;
-    bySede[r.sede] += 1;
-  }
-  var prepared = regular + extras;
-  var sedeSum = 0;
-  for (var k in bySede) {
-    if (bySede.hasOwnProperty(k)) sedeSum += bySede[k];
-  }
-  return {
-    regular: regular,
-    extras: extras,
-    pending: pending,
-    cancelled: cancelled,
-    prepared: prepared,
-    sedeSum: sedeSum,
-    ok: prepared === sedeSum
-  };
 }
