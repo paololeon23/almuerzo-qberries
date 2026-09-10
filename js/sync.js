@@ -3,8 +3,13 @@ import { store } from "./store.js";
 
 let flushing = false;
 
-function markListaTurno(record) {
+function markListaTurno(record, raw) {
   if (!record || record.type !== "lista" || record.payload?.extra) return;
+  // Si el servidor dijo "ya enviado" pero no guardó a nadie, no bloquear el celular:
+  // permite reintentar como almuerzo normal (evita forzar Extra con Lista 0).
+  if (raw && raw.duplicate && (raw.already || raw.error === "ya_enviado") && Number(raw.trabajadores || 0) === 0) {
+    return;
+  }
   const sid = String(record.payload?.supervisor_id || "").replace(/\D/g, "").slice(0, 8);
   store.setTurnoDia({
     dni: sid,
@@ -111,10 +116,10 @@ function isListaRecord(record) {
   return record?.type === "lista" && !record.payload?.extra;
 }
 
-function dropListaAsDuplicate(record) {
+function dropListaAsDuplicate(record, raw) {
   store.pushHistorial({ ...record, duplicate: true, confirmed: true });
   store.removeCola(record.clientId);
-  markListaTurno(record);
+  markListaTurno(record, raw);
 }
 
 export async function saveAndSync(record) {
@@ -127,8 +132,8 @@ export async function saveAndSync(record) {
     const result = await postRecord(queued);
     store.pushHistorial({ ...result.record, duplicate: result.duplicate, confirmed: true });
     store.removeCola(result.record.clientId);
-    markListaTurno(result.record);
-    return { status: "enviado", duplicate: result.duplicate, record: result.record };
+    markListaTurno(result.record, result.raw);
+    return { status: "enviado", duplicate: result.duplicate, record: result.record, raw: result.raw };
   } catch {
     return { status: "pendiente", record: queued };
   }
@@ -150,7 +155,7 @@ export async function flushQueue(onEach) {
     for (const record of [...cola]) {
       try {
         if (isListaRecord(record) && store.getTurnoDia()?.enviado) {
-          dropListaAsDuplicate(record);
+          dropListaAsDuplicate(record, { duplicate: true, already: true, trabajadores: 1 });
           summary.duplicates += 1;
           onEach?.({ ok: true, record, result: { duplicate: true, already: true } });
           continue;
@@ -158,7 +163,7 @@ export async function flushQueue(onEach) {
         const result = await postRecord(record);
         store.pushHistorial({ ...result.record, duplicate: result.duplicate, confirmed: true });
         store.removeCola(result.record.clientId);
-        markListaTurno(result.record);
+        markListaTurno(result.record, result.raw);
         if (result.duplicate) summary.duplicates += 1;
         else summary.sent += 1;
         onEach?.({ ok: true, record: result.record, result: result.raw });

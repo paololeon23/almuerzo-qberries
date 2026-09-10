@@ -1,5 +1,5 @@
-export const APP_VERSION = "1.3.6";
-export const CACHE_NAME = "cocina-qb-v166";
+export const APP_VERSION = "1.3.15";
+export const CACHE_NAME = "cocina-qb-v175";
 export const APP_ASSETS = [
   "./",
   "./index.html",
@@ -18,6 +18,7 @@ export const APP_ASSETS = [
   "./data/config.json",
   "./data/supervisors.json",
   "./data/trabajadores.json",
+  "./data/lotes.json",
   "./assets/logo-qberries.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

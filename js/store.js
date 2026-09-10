@@ -75,8 +75,9 @@ function openIdb() {
 }
 
 async function idbPutDni(dni) {
+  let db;
   try {
-    const db = await openIdb();
+    db = await openIdb();
     await new Promise((resolve, reject) => {
       const tx = db.transaction(IDB_STORE, "readwrite");
       tx.objectStore(IDB_STORE).put(dni, "dni");
@@ -85,12 +86,15 @@ async function idbPutDni(dni) {
     });
   } catch {
     /* el celular sigue con localStorage */
+  } finally {
+    try { db?.close(); } catch { /* ignore */ }
   }
 }
 
 async function idbGetDni() {
+  let db;
   try {
-    const db = await openIdb();
+    db = await openIdb();
     const raw = await new Promise((resolve, reject) => {
       const tx = db.transaction(IDB_STORE, "readonly");
       const req = tx.objectStore(IDB_STORE).get("dni");
@@ -101,12 +105,15 @@ async function idbGetDni() {
     return isSesionDni(dni) ? dni : "";
   } catch {
     return "";
+  } finally {
+    try { db?.close(); } catch { /* ignore */ }
   }
 }
 
 async function idbDelDni() {
+  let db;
   try {
-    const db = await openIdb();
+    db = await openIdb();
     await new Promise((resolve) => {
       const tx = db.transaction(IDB_STORE, "readwrite");
       tx.objectStore(IDB_STORE).delete("dni");
@@ -115,6 +122,8 @@ async function idbDelDni() {
     });
   } catch {
     /* ignore */
+  } finally {
+    try { db?.close(); } catch { /* ignore */ }
   }
 }
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = "cocina-qb-v166";
+const CACHE_NAME = "cocina-qb-v175";
 
 const PRECACHE = [
   "./",
@@ -17,6 +17,7 @@ const PRECACHE = [
   "./data/config.json",
   "./data/supervisors.json",
   "./data/trabajadores.json",
+  "./data/lotes.json",
   "./assets/logo-qberries.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

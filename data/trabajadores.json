@@ -1,13 +1,13 @@
 [
     {
-        "dni": "70501230",
-        "nombre": "VILLARREAL MUÑOZ MARIA DEL CARMEN",
+        "dni": "70485667",
+        "nombre": "VILLARREAL MUÑOZ JENNY AURORA",
         "cargo": "OBRERO",
         "fechaIngreso": "10/08/2026"
     },
     {
-        "dni": "70485667",
-        "nombre": "VILLARREAL MUÑOZ JENNY AURORA",
+        "dni": "70501230",
+        "nombre": "VILLARREAL MUÑOZ MARIA DEL CARMEN",
         "cargo": "OBRERO",
         "fechaIngreso": "10/08/2026"
     },
@@ -24094,5 +24094,3557 @@
         "nombre": "CRUZ DAVALOS SANTOS SEBASTIANA",
         "cargo": "OBRERO",
         "fechaIngreso": "27/08/2026"
+    },
+    {
+        "dni": "10805048",
+        "nombre": "PEREZ DEL AGUILA SILVIA PATRICIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18125183",
+        "nombre": "CONTRERAS DESPOSORIO HIELA ANA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18837022",
+        "nombre": "NAVARRO BURGOS ELIZABETH DEL PILAR",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18891962",
+        "nombre": "YNCIL MORENO ALEXANDER ROBERTO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19076725",
+        "nombre": "MANTILLA HORNA MANUELA SILVIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19333921",
+        "nombre": "FLORES TERAN DIANA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19546513",
+        "nombre": "ASCATE RODRIGUEZ LEUTERIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "40541902",
+        "nombre": "RAMIREZ REATEGUI JANINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "41739065",
+        "nombre": "RUBIO MAZO YENNY MARITZA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "41959405",
+        "nombre": "CASTOPE BAZAN DE ACUÑA FANNY LILIANA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42265425",
+        "nombre": "MALQUI SANCHEZ ALMA LIDIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42274001",
+        "nombre": "CASTILLO VERA CESAR WALTER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42351366",
+        "nombre": "USHIÑAHUA TENAZOA HUGO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42574008",
+        "nombre": "ASCOY ORTIZ CAROLINA FIORELLA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42891483",
+        "nombre": "VERASTEGUI CANO ERIKE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43012327",
+        "nombre": "PEREZ MIRANDA LUCIO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43413459",
+        "nombre": "VENTURA ARAUJO ADRIANA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43417865",
+        "nombre": "VALLEJOS CARRASCO LENNY ROSSMERY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43436644",
+        "nombre": "PAREDES AVALOS ELSA MERCEDES",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43503260",
+        "nombre": "LARA CARRASCO CYNTHIA BERNIT",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43607123",
+        "nombre": "URBINA ALVAREZ ARACELI YOVANY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43624542",
+        "nombre": "FLORES ROSAS PAMELA MARILI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43768523",
+        "nombre": "SAN MARTIN GUEVARA HUDSON",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43784018",
+        "nombre": "CACHIQUE PANAIFO FLOR JANETH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43860761",
+        "nombre": "ÑIQUIN ROLDAN YAJAIRA JACQUELINE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43980026",
+        "nombre": "NAVARRO BURGOS JHOSSELYN HEIDI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44073104",
+        "nombre": "ZACARIAS HUATAY ROCIO ALICIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44125278",
+        "nombre": "SANDOVAL ZAMORA LEYDI DIANA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44401909",
+        "nombre": "CONDOR QUISPE ROSA ANGELICA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44596479",
+        "nombre": "SOTERO RAMOS AURORA LIZBETH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44923531",
+        "nombre": "SALIRROSAS MOZO DEINER RUODIR",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45007389",
+        "nombre": "PAVON VILLALOBOS ROCIO DEL PILAR",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45084247",
+        "nombre": "VILLANUEVA GAVIDIA MARLON HENRY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45294664",
+        "nombre": "AVILA PAREDES VICTORIANO SANTOS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45463198",
+        "nombre": "JARA GONZALES JUAN JULIO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45741650",
+        "nombre": "VASQUEZ PAREDES ROCIO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45999873",
+        "nombre": "PORTILLA LLAJARUNA ANDRES ABELINO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46074812",
+        "nombre": "BAUTISTA MEJIA NANCY MELISA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46211299",
+        "nombre": "LOPEZ OLIVARES LEONOR LUTERIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46300995",
+        "nombre": "AGUIRRE VASQUEZ REYNALDO ISRAEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46681320",
+        "nombre": "SILVA MEDINA MARIA MARLENY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47204945",
+        "nombre": "VEGA RUIZ INGRY FANNY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47377979",
+        "nombre": "ARIAS HUINGO YURI KATHERINE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47396206",
+        "nombre": "WATANABE AGUILAR JAKELIN ROSA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47594119",
+        "nombre": "GONZALES LAVADO SONIA IVONN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47746598",
+        "nombre": "AGUILAR VALIENTE JOEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47853446",
+        "nombre": "SANCHEZ VARGAS MARIA ALICIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48413677",
+        "nombre": "VALDES RODRIGUEZ MICAELA ELIZABETH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48548191",
+        "nombre": "SANTOS RECALDE MIGUEL ANGEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48693477",
+        "nombre": "TRUJILLO PIRGO CELINA PATRICIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48892965",
+        "nombre": "CACIQUE OBLITAS YOLANDA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "49062629",
+        "nombre": "SÁNCHEZ PINCHI ARLENI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60218568",
+        "nombre": "SALAZAR QUEZADA DIANA LUZ",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60219082",
+        "nombre": "CABANILLAS ROMERO WUESLY FRANCOIS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60426040",
+        "nombre": "GUEVARA CONTRERAS ALEX JHOAN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60458612",
+        "nombre": "CASTILLO MANTILLA KEYSI YARIXA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60484528",
+        "nombre": "YUPANQUI PEREZ DANNY JEANPIERE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60493076",
+        "nombre": "OCAS CASTOPE MAICOL ALEXANDER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60580995",
+        "nombre": "VISITACION RUIZ JOSE LUIS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60633037",
+        "nombre": "CUEVA CUEVA HEBER VALENTINO MARCOS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60902584",
+        "nombre": "ASTUCHADO GUZMAN ESMERALDA ALEJANDRA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60950129",
+        "nombre": "CALDERON GAMBOA MELANY YAMEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60992675",
+        "nombre": "CARI CHAVEZ JEAN CRISTIAN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61158044",
+        "nombre": "VILLANUEVA RAMIREZ JESSICA ESMERALDA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61242555",
+        "nombre": "VENTURA REYES FREDDY HERNAN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61689534",
+        "nombre": "GUARNIZ HUAMAN FRANCO ANDREE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "62219271",
+        "nombre": "GALARZA GARCIA JUBERTH ALEXANDER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70296928",
+        "nombre": "TORRES BAZAN CINTHIA ELIZABETH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70380597",
+        "nombre": "RAMOS CASTILLO ZULEIMA ANTONIETA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70468447",
+        "nombre": "YUPANQUI CORRALES VILMA YOLANDA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70507022",
+        "nombre": "ANTICONA QUISPE CARMEN PATRICIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70643827",
+        "nombre": "LEYVA ARANDA WALESKA NAHOMI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70673697",
+        "nombre": "VEGA QUISPE KEVIN MOISES",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70943329",
+        "nombre": "PAREDES GUTIERREZ ORLANDO ERNESTO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70987186",
+        "nombre": "VERASTEGUI YOVERA JOSE MARIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70992268",
+        "nombre": "LOPEZ CRUZ DAMMERT DALADIER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71329807",
+        "nombre": "NARRO TRIGOSO ROSITA EDITH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71598699",
+        "nombre": "ZAPATA CHUMACERO MARIA YULISSA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71630308",
+        "nombre": "RODRIGUEZ ARTEAGA CARLOS RUBEN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71680638",
+        "nombre": "PINTO BENITES ESNAIDER JHOSEP",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71691376",
+        "nombre": "RAMIREZ SALIRROSAS LUIS FERMIN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71691378",
+        "nombre": "RAMOS SALIRROSAS LEYDI MARIBEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71792201",
+        "nombre": "GONZALES SAAVEDRA JOHN GIANCARLOS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72032285",
+        "nombre": "RAMOS CASTILLO MARIA DEL CARMEN MILAGROS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72724428",
+        "nombre": "MURAYARI LOMAS LALY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72763018",
+        "nombre": "ARTEAGA LEANDRO MARIEL ALEXANDRA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73082068",
+        "nombre": "ALTAMIRANO CUSTODIO ESMERALDA HAYDEE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73422240",
+        "nombre": "FONSECA VASQUEZ JOSE JHAIR",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73932480",
+        "nombre": "MELCHOR HERNANDEZ YORDIÑO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73980445",
+        "nombre": "CAMPOS ASCOY ALONDRA CAROLINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73999659",
+        "nombre": "REQUELME NAVARRO ALEXANDRA NAIDELYN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74286758",
+        "nombre": "CALDERON SOLIS DANNA KORAL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74554023",
+        "nombre": "MENDOZA VALENCIA JOSE RONAL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74730358",
+        "nombre": "ROJAS CORREA AYDA MARISOL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74982042",
+        "nombre": "AZAÑERO GIL ARELY NAYELY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75047831",
+        "nombre": "CUELLAR OLIVARI KIMBERLIE KRISTAL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75091307",
+        "nombre": "DE LA CRUZ CARHUALLAY ANTHONY STEVE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75407589",
+        "nombre": "RUBIO VENTURA YOVANI ROCIO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75479961",
+        "nombre": "AGUILAR NAVARRO KEVIN MANUEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75483565",
+        "nombre": "YUMBATO HUANCHO INGRI FIORELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75614791",
+        "nombre": "RIOS ROJAS DARIANA PAMELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75749216",
+        "nombre": "AVILA NINAQUISPE STHFANIE JASMIN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75867022",
+        "nombre": "CARRANZA VENTURA ANA YOHANY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75910950",
+        "nombre": "NARRO CONTRERAS TIFANI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76187449",
+        "nombre": "RODRIGUEZ ZAMUDIO JOYCE DANAHE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76433921",
+        "nombre": "VILLANUEVA RAMIREZ BELINDA YULISSA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76522794",
+        "nombre": "ZAPATA GONZALEZ HENRY SAMUEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76613408",
+        "nombre": "TORIBIO GOMEZ ROXANA LIZBETH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76613898",
+        "nombre": "BLAS HARO JHEIMI ESDVIN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76655408",
+        "nombre": "LINARES VILLAR LUCERITO CRISTINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76865908",
+        "nombre": "TERAN CHEGNE JAIRO JHON",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76919523",
+        "nombre": "MERINO VASQUEZ LUIS ALBERTO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76948102",
+        "nombre": "QUINTANA BOBADILLA JADY JOSELYNE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77015735",
+        "nombre": "RIOS ROJAS MONICA CELIDETH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77466912",
+        "nombre": "CARRILLO REYNA CRISTIAN PERCY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77567628",
+        "nombre": "OLIVARES MARCELO LINDA DIANA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77924388",
+        "nombre": "CUEVA RIVERA ELI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "79258202",
+        "nombre": "ACOSTA CONTRERAS CECILIA CAROLINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80136720",
+        "nombre": "VASQUEZ URBINA LINCOL EDWIN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80320150",
+        "nombre": "CUEVA CABRERA ELVIA MARIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80323756",
+        "nombre": "CARRIÓN CASTILLO GLORIA VERÓNIKA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80428502",
+        "nombre": "GONZALES GONZALES ROSA ESMIDIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "81193677",
+        "nombre": "ROSAS QUISPE FRANCO MANUEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "03855026",
+        "nombre": "VARGAS PEÑA SONIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "08195076",
+        "nombre": "RODRIGUEZ CORCUERA YOLANDA CATALINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60587643",
+        "nombre": "ARANDA ESCALANTE RONALD CHARLEEN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "78476694",
+        "nombre": "CORDOVA MONTOYA ANA ABIGAIL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "40015488",
+        "nombre": "CARRION MONTENEGRO LUSBINDA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72143108",
+        "nombre": "CARRANZA ROJALES HELEN EDITHA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18169655",
+        "nombre": "ENRIQUEZ LAVADO MARIA JUANA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19253282",
+        "nombre": "CHANDUVI CASTRO OSCAR ORLANDO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19253488",
+        "nombre": "CHOLAN AGUIRRE RITA LUZMILA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "41142546",
+        "nombre": "PEREZ RODRIGUEZ SANTOS VIRGEN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "41501140",
+        "nombre": "JARA NAUCA YOLA MARIBEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "41810425",
+        "nombre": "HOYOS CHILON DIANA MAGALY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42687202",
+        "nombre": "PAREDES RODRIGUEZ CRISTINA ESMELDA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44327548",
+        "nombre": "LLAJA CABANILLAS YECENIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46326815",
+        "nombre": "RIVEROS POLO MALQUIAS JAVIER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48909265",
+        "nombre": "RODRIGUEZ REYES LUIS ALBERTO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61299970",
+        "nombre": "SALIRROSAS MINCHOLA JAIRO JEANPIER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61300183",
+        "nombre": "LOPEZ ESQUIVEL WALTER ANDERSON",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61440571",
+        "nombre": "CASTILLO ESQUIVEL ABRAHAM ISAAC",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70560803",
+        "nombre": "RODRIGUEZ CHOLAN ROSA ANTUANED",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71381019",
+        "nombre": "ACEVEDO FERREL DIEGO ALESANDRO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75748942",
+        "nombre": "GARCIA FLORES ANGEL ANTONIO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75804033",
+        "nombre": "TERRONES SACRAMENTO ROSA ELIZABETH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76468290",
+        "nombre": "GONZALEZ ZAVALETA GERALDINE FABIANA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76804310",
+        "nombre": "GARCIA AMAYA CARLOS JIMMY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77154731",
+        "nombre": "CABRERA ASTO JENNIFER JIMENA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80523939",
+        "nombre": "HUAYAC AGUILAR ANIBAL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "81217623",
+        "nombre": "ALEGRIA TAMAYO CRISTY KEMELI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60550779",
+        "nombre": "NORIEGA PONTE ALDAIR",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48923349",
+        "nombre": "RODRIGUEZ MONGE GABRIELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18107069",
+        "nombre": "VASQUEZ MAURICIO MARINO WILLIAM",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18137109",
+        "nombre": "SANDOVAL CARDENAS FLOR",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19061285",
+        "nombre": "PAREDES VILLAJULCA SIMON ALFREDO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19075501",
+        "nombre": "COLLANTES MENDOZA MARIA TERESA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "20064849",
+        "nombre": "FAJARDO VILLAVERDE NADINE BELU",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "27160714",
+        "nombre": "AMAYA TENA MARIA BERLAO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42952380",
+        "nombre": "GONZALES PEREZ EDGAR",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44301044",
+        "nombre": "ESPEJO GALVEZ OLIVIA BELERMINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45874399",
+        "nombre": "FLORES ZOCON GAVI ARISELI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48251649",
+        "nombre": "ARENAS LAZARO GREIDER YABEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48350303",
+        "nombre": "VASQUEZ GUEVARA MAGALI ROCIO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48889319",
+        "nombre": "TORRES GUERRERO SIMON ELOY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60208920",
+        "nombre": "LOZANO RENGIFO YENI ROCIO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60768705",
+        "nombre": "BAZAN POLO GIANELLA ANTHONELLA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60994108",
+        "nombre": "JACINTO ACEVEDO CLARA MIGUELINA ABIGAIL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61220274",
+        "nombre": "VEGA MATTA BRAYAN ESTEBAN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "62906330",
+        "nombre": "FACHIN FLORES DAYSI DAYLI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70690845",
+        "nombre": "CONTRERAS CASTILLO ROSA CARMELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71802932",
+        "nombre": "DE LA CRUZ GAMBOA NIEVES HERMINIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72093915",
+        "nombre": "OLIVARES CARRANZA ALEJANDRO GABRIEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73174121",
+        "nombre": "RODRIGUEZ RUIZ JAVIER DARIENN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73392344",
+        "nombre": "IDROGO SAAVEDRA AMALIA JUDITH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75176604",
+        "nombre": "RAMOS CONTRERAS KARINA ESMERALDA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75470288",
+        "nombre": "ROJAS POLO LUIS FERNANDO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76070279",
+        "nombre": "CHAVEZ CIPRA ELIZABETH CAROLINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76399687",
+        "nombre": "SANCHEZ GIL IRIS ANISAYROS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76422151",
+        "nombre": "VASQUEZ CABELLOS PATRICIA ALEJANDRA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76583748",
+        "nombre": "GARCIA VILLANUEVA JENNIFER EDITH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77129589",
+        "nombre": "FLORES BARTRA ERLITH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77169495",
+        "nombre": "MARIN ARTEAGA KAROLINA NICOLE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77875233",
+        "nombre": "OTINIANO ROJAS ALAN HUMBERTO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "78195035",
+        "nombre": "VILLANUEVA GAVIDIA SARAI ABIGAIL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "78551496",
+        "nombre": "LOYOLA BARRETO ERICKA ATALYA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80182298",
+        "nombre": "VILLANUEVA FLORES SANTOS FABIAN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "17881007",
+        "nombre": "URUNA ANDAYCURA SECUNDINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19079993",
+        "nombre": "ROSAS SALINAS ROSELINDA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19692461",
+        "nombre": "SANCHEZ LUJAN ANTERO APOSTOL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42347023",
+        "nombre": "BACILIO OBESO SEGUNDO ANIBAL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44104030",
+        "nombre": "VIERA PUELLES JUSTINIANO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44753920",
+        "nombre": "CERNA GAMONAL FELIX SANTIAGO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44924617",
+        "nombre": "FIGUEROA CONTRERAS ESTELITA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46513452",
+        "nombre": "GARCIA RODRIGUEZ EMERITA CORINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46824905",
+        "nombre": "HUAMAN LLAMOCTANTA ISMAEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47130471",
+        "nombre": "LEYVA BUENO ALEXANDER ROEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47408022",
+        "nombre": "VASQUEZ AGUILAR ASUNCIONA CARLOTA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48299641",
+        "nombre": "OLLARCE MANRIQUE CARLOS ALFREDO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48523371",
+        "nombre": "CHAMORRO VERA YULISSA LIZETH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48725415",
+        "nombre": "CASTILLO GUERRERO MARIA GLENDY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48999739",
+        "nombre": "LEYVA BUENO MAXIMILA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60520157",
+        "nombre": "LOPEZ CRUZ DIEGO LEONEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60936858",
+        "nombre": "MENDOZA ESPINOZA CAROLINA ELISANDRA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61232049",
+        "nombre": "LARA CERQUERA ANELIDA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "62371640",
+        "nombre": "CUBAS COTRINA YANIRA LIZBETH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70359784",
+        "nombre": "DELGADO VELASQUEZ ESTHER NOEMI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70468887",
+        "nombre": "VARAS VILCA VERONICA MARIBEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71330286",
+        "nombre": "ANDRADE RENGIFO GUSTAVO MANUEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71654244",
+        "nombre": "LLAPO MELCHOR ERLITA NIALKINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74093332",
+        "nombre": "QUISQUICHE CARRANZA GERSON WILFREDO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74137145",
+        "nombre": "HILARIO VILLANUEVA BRAYAN EDUARDO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74664117",
+        "nombre": "BACILIO BURGOS YANELA LIZETH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74686408",
+        "nombre": "MENDOZA ESPINOZA ERIKA ALELY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74875375",
+        "nombre": "LLAPO MELCHOR YANSIN MELVIN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74993077",
+        "nombre": "TOCAS LARA NELSON NATAEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75578394",
+        "nombre": "HUAMAN HUANCAY ELMER MISAEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76670670",
+        "nombre": "CHAMORRO VERA MARIA GLADYS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77648249",
+        "nombre": "BARDALES HUACCHA MILAIDY DALY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "79218558",
+        "nombre": "CASTILLO GUERRERO SARAI NICOLLE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60532149",
+        "nombre": "RAMIREZ VERA LEANDRO DAVID",
+        "cargo": "SCANER",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74959142",
+        "nombre": "DELGADO ABANTO SUSAN SUE",
+        "cargo": "SUPERVISOR DE COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46459061",
+        "nombre": "OCAS GARCIA YURI MELISSA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48283799",
+        "nombre": "GONZALES ARENAS DANI MARIANELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71760719",
+        "nombre": "BENITES REYES MIRTHA YOLY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74560811",
+        "nombre": "TANTA CORREA LUIS JOSIAS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18019664",
+        "nombre": "OTINIANO SANCHEZ ROSSMERY EDITH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18856573",
+        "nombre": "RONCAL CARDENAS JORGE ALBERTO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18861609",
+        "nombre": "GARCIA ZURITA ZOILA YESENIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18893031",
+        "nombre": "VILLAR VARGAS MIGUEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18906103",
+        "nombre": "IGLESIAS CASTILLO SOLEDAD",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "26699362",
+        "nombre": "TEATINO APOLITANO PEDRO PABLO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "26954006",
+        "nombre": "IPARRAGUIRRE POLO BASILIA EUGENIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "27421961",
+        "nombre": "VILLANUEVA CASIANO MARIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "27570866",
+        "nombre": "ESPINOZA RAMOS FABIAN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "40575830",
+        "nombre": "SEGURA INFANTES GREGORIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43495068",
+        "nombre": "MALUQUISH HUAMAN RICHAR UVELSER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43951818",
+        "nombre": "URIARTE PEÑA JOVANI ARACELI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44770040",
+        "nombre": "BADA POLO ROCIO MARLENI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45285672",
+        "nombre": "MAYTA ESCOBAR DILSER JEINER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45501311",
+        "nombre": "YACOPAICO ORTIZ JUANA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46491539",
+        "nombre": "FLORES OTINIANO CINTHIA ELIZABETH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46930319",
+        "nombre": "SANCHEZ VASQUEZ DORALIZA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47242764",
+        "nombre": "JULON MEJIA LEDIS ROXANA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47330928",
+        "nombre": "ACEVEDO POLO MERCEDES ALICIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47621601",
+        "nombre": "SANCHEZ ALVARADO JONATHAN ENRIQUE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48605541",
+        "nombre": "GARCIA INUMA HAMILTON RIVER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60220497",
+        "nombre": "ESPINOZA HUAMAN RONALDIÑO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60438482",
+        "nombre": "FARFAN PARIONA ANA LUZ",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60536104",
+        "nombre": "HERRERA MENDOZA RAHI ELMORE VALENTINO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61013985",
+        "nombre": "HILARIO FLORES ANTONY ADYUVI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61600841",
+        "nombre": "MEZA CANAQUIRI MARILI NAYELI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "63131492",
+        "nombre": "CALLE HUAYUNGA KAYRA RAQUEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70797514",
+        "nombre": "YGNACIO QUISPE PERCI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71767032",
+        "nombre": "FLORES VENTURO ROSTANI MILER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71960668",
+        "nombre": "HIPOLITO VILCA NADIA MARYLIN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72464793",
+        "nombre": "RAMIREZ BAUTISTA ALEX HUMBERTO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73767329",
+        "nombre": "LOZANO VALVERDE ELVIS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80313087",
+        "nombre": "VALVERDE MENDIETA JUDITH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "81545462",
+        "nombre": "SANCHEZ DELGADO SONIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60501255",
+        "nombre": "QUISPE ALFARO JOSE ENRRIQUE",
+        "cargo": "SCANER",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76357590",
+        "nombre": "TRUJILLO MENDOZA ROSMEL KENYI",
+        "cargo": "SUPERVISOR DE COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "26954227",
+        "nombre": "BRICEÑO SANTOS JULIO EMILIO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "40173234",
+        "nombre": "VASQUEZ CASTILLO MARIA ASUNCIONA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "41539043",
+        "nombre": "SANDOVAL CHUGNAS ANA CECILIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43213457",
+        "nombre": "VEGA ESQUIVEL CHARITO NOEMY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43551906",
+        "nombre": "DIAZ LEYVA CARMEN BERANISE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43784033",
+        "nombre": "MERCEDES SEGURA ELSA MARLENY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45465727",
+        "nombre": "JAVE ORBEGOSO DIEGO ARMANDO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46846093",
+        "nombre": "ROJAS HUAMAN PERCY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46874400",
+        "nombre": "AREDO UCEDA MILTHON CESAR",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47580442",
+        "nombre": "CASTILLO LUJAN ROSMERY MARIBEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47765331",
+        "nombre": "RAMOS LOPEZ ISABEL NOEMI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48675703",
+        "nombre": "TAPAYURI MURAYARI PALMIRA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60554510",
+        "nombre": "PEREZ LAIZA MELANY ROXANA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60577977",
+        "nombre": "RUIZ ROMAN CELENA LYSBET",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60818494",
+        "nombre": "FLORES CHAVARRI ROSMEL IDELSO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70747319",
+        "nombre": "PEREZ MAURICIO YOLI ANALI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71192011",
+        "nombre": "VASQUEZ RODRIGUEZ DANIELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71767079",
+        "nombre": "AREDO UCEDA LUIS RENZO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71767080",
+        "nombre": "AREDO UCEDA MAICOL ABEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72842384",
+        "nombre": "QUIROZ MERLO ANDERSON ALDAIR",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73432975",
+        "nombre": "TOLEDO TORRES JUAN MOISES",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73432976",
+        "nombre": "TOLEDO TORRES JESUS ABEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75102005",
+        "nombre": "ARGOMEDO BENITES ISELA ARALIZA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75948479",
+        "nombre": "HUATAY VASQUEZ ERNESTO DAVID",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77420724",
+        "nombre": "CHOMBA CHAVARRI NILSON ROBERTO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47976667",
+        "nombre": "HERRERA MUÑOZ SANTOS RICHARD",
+        "cargo": "SUPERVISOR DE COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75064955",
+        "nombre": "MENDOZA FLORES ANA MARICELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61353544",
+        "nombre": "SANDOVAL NAVIDAD JUAN JOSE EDU",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "62257812",
+        "nombre": "MEDINA CORTEZ JOSE JAVIER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "62339656",
+        "nombre": "PEREZ SILVA ALEJANDRO JESUS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61561719",
+        "nombre": "GARCIA VILLACORTA YANIRA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "06601132",
+        "nombre": "06601132",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "27575643",
+        "nombre": "HUAMAN CHOROCO JOSE SANTOS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72096348",
+        "nombre": "DIOSES MENDOZA FLOR MARIA",
+        "cargo": "CALIDAD",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "17854147",
+        "nombre": "VILLALOBOS VIDAL MARIA ZULEIZA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18125373",
+        "nombre": "VILLENA LOPEZ LUZ MARY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18144746",
+        "nombre": "CARRANZA SIMON ROSA MARIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19032981",
+        "nombre": "ABANTO ROJAS ROBERTH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42494461",
+        "nombre": "PAZ HURTADO ROSA DINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42534619",
+        "nombre": "POLO MIGUEL JUAN ALBERTO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43294619",
+        "nombre": "TORRES LLANOS KARINA XIOSMARA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45296942",
+        "nombre": "GERONIMO DIAZ JULIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45406936",
+        "nombre": "ALCANTARA DIAZ MARIA BELSY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45560102",
+        "nombre": "RODRIGUEZ FLORES MAGALI MARIANELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46557389",
+        "nombre": "MONTEZA ALTAMIRANO HIDALI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47724655",
+        "nombre": "GARCIA CASTILLO FIMA MILAGRITOS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48181257",
+        "nombre": "MARTINEZ GARCIA JUAN CARLOS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48775118",
+        "nombre": "REYES MEDINA WENDY ESTEFFANI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60596122",
+        "nombre": "PAREDES ANDRADE LEITON YAMIR",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61317149",
+        "nombre": "ANGULO RUIZ ARACELY ANALY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "62790845",
+        "nombre": "POLO TORRES ANTHONY JANPIER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "63070760",
+        "nombre": "ROJAS SANTILLAN MAGDALENA GEMMA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71752132",
+        "nombre": "CABRERA VEGA ROYDIN JEFERSON",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72475978",
+        "nombre": "REBAZA SANTILLAN MARQUITA MARLENY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72527557",
+        "nombre": "RODRIGUEZ ROBLES YUVER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75092087",
+        "nombre": "GOMEZ RUIZ ROSA LIZBETH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75241450",
+        "nombre": "INFANTES GAMBOA LUIS FERNANDO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75332629",
+        "nombre": "CONCHA SABALETA SILVIA MARIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75332630",
+        "nombre": "CONCHA SABALETA CARLOS ENRIQUE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75553481",
+        "nombre": "YAJAHUANCA AGURTO ROSA VIOLETA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76859103",
+        "nombre": "SANCHEZ PALACIOS ROXANA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76939201",
+        "nombre": "CHAMAY PEREZ MARIA DULCELINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77820301",
+        "nombre": "ROJAS TOLENTINO JEYZON KEYFER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "78018393",
+        "nombre": "VEGA RODRIGUEZ ROMARIO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "79985177",
+        "nombre": "BLAS CUENCA MARICIELO NICOL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19260959",
+        "nombre": "FLORES YENGLE MARGARITA BERTILDE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42273974",
+        "nombre": "NIETO REYES JORGE EDUARDO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42697110",
+        "nombre": "CAIPO ALFARO SANTOS MANUEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43930178",
+        "nombre": "PASTOR VIGO JARUMY CORINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45417573",
+        "nombre": "CASTILLO VALDERRAMA JHON DAVE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45554365",
+        "nombre": "MINCHOLA POLO EMITERIO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61669933",
+        "nombre": "SANCHEZ YUPANQUI ROCIO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71198820",
+        "nombre": "TORREZ CABANILLAS NOE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74052293",
+        "nombre": "SANCHEZ YUPANQUI LEYDIS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74293127",
+        "nombre": "CARDENAS HUAMAN SHIRLEY ALEJANDRINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74456550",
+        "nombre": "MEDINA CRESPIN JAIVER SERGIO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74481806",
+        "nombre": "VALDEZ RIOS SELENE MAGDIEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76908988",
+        "nombre": "ARBILDO ICOMENA DEIVID",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80300260",
+        "nombre": "GIL MUÑOZ DE AZAÑERO MARITZA MARIBEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60727191",
+        "nombre": "SAUCEDO ARISTA ANGEL STALYN",
+        "cargo": "SCANER",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47289595",
+        "nombre": "HUAMAN MUÑOZ MARIELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61425114",
+        "nombre": "SHUNTA AHUANANCHI CATTYA FIORELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "62966252",
+        "nombre": "MORA PABLO EDWIN FELIPE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71708304",
+        "nombre": "GOICOCHEA PARDO AUNER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75394507",
+        "nombre": "ABANTO JUAREZ LEYDI ELIZABETH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "06216115",
+        "nombre": "06216115",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75091579",
+        "nombre": "RIVEROS REYES KARLIN AYAMALID",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "02198156",
+        "nombre": "02198156",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74353111",
+        "nombre": "PERALTA SOTO AZUCENA MARISOL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74292194",
+        "nombre": "IZQUIERDO VILCA YAJAIRA NOEMI",
+        "cargo": "SCANER",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48784636",
+        "nombre": "RAMIREZ SALIRROSAS FRANCISCO MOISES",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75600174",
+        "nombre": "DEZA SANCHEZ ESTEFANI ANTONIETA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "40621686",
+        "nombre": "PULIDO MONTES JOSE LUIS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72745916",
+        "nombre": "URQUIAGA VALVERDE RICARDO ANGEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "92579456",
+        "nombre": "VALVERDE ROSALES JUAN DAVID",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "07430657",
+        "nombre": "07430657",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "06247106",
+        "nombre": "06247106",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76691428",
+        "nombre": "SALAZAR CHUQUILIN THALIA ESTELITA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "04587156",
+        "nombre": "04587156",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "41620900",
+        "nombre": "REYNA LOLOY DANILA MARIBEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42649405",
+        "nombre": "ARANA CRISOLOGO MAGALI JANETT",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47429960",
+        "nombre": "HORNA ZAVALA ROSITA YAJAIRA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "08870391",
+        "nombre": "08870391",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "06318147",
+        "nombre": "06318147",
+        "cargo": "SUPERVISOR DE COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75709025",
+        "nombre": "75709025",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43295414",
+        "nombre": "LLAPO CALDERON KARIN YESENIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43359899",
+        "nombre": "VALIENTE URIOL ROSA DICDALIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48114605",
+        "nombre": "GONZALEZ FLORES JOSE LUIS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "63303804",
+        "nombre": "CABRERA VILLALOBOS RENZO DAVID",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70497422",
+        "nombre": "GARCIA VASQUEZ JHANNY MIRELE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77691933",
+        "nombre": "PINILLOS QUEZADA CARLOS ALBERTO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43849130",
+        "nombre": "AGUILAR AZAÑERO QUELINDA ROSMERY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44178848",
+        "nombre": "GIL PEREZ PAULA YELITSA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45483786",
+        "nombre": "CABRERA JULCA JEEN FRANDY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "62301869",
+        "nombre": "PETSAYIT NUGKUM SUMMY LINDA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70551350",
+        "nombre": "FLORES GUTIERREZ MARICIELO CAROLINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72763020",
+        "nombre": "DIAZ CERQUIN JHONATAN ANTHONY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73951560",
+        "nombre": "BENITES NOVOA JOSE RAUL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74482693",
+        "nombre": "PORTAL BRICEÑO YOJAN SOTIL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77145076",
+        "nombre": "BUSTAMANTE DELGADO JUAN CRISTHIAN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77321069",
+        "nombre": "GARCIA VILLALOBOS DOMILIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "17946500",
+        "nombre": "VILCA GIL YANE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18899288",
+        "nombre": "NINAQUISPE MERCADO ROGER RAFAEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19072611",
+        "nombre": "MORALES RODRIGUEZ BETY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "26687765",
+        "nombre": "MINCHAN CARMONA JOSE CELSO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "26737932",
+        "nombre": "CUENCA FLORES PEDRO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42525914",
+        "nombre": "DE LA CRUZ PIÑA ESTHER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42581310",
+        "nombre": "MINCHAN TORRES JORGE LOUIS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45284553",
+        "nombre": "VERA LAYZA SARELA MIRIAN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45400149",
+        "nombre": "RUIZ RODRIGUEZ ALBERTO RANIERY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46601366",
+        "nombre": "VILLA PEÑA MARIA MERCEDES",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46875245",
+        "nombre": "MERCEDES MARTINEZ GREGORIA FELICITA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47575074",
+        "nombre": "VARGAS LOLOY MILY ESMERALDA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48537767",
+        "nombre": "VASQUEZ VILCA ROSITA MILAGROS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48698257",
+        "nombre": "LOLOY RODRIGUEZ YHONATAN UBER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48860965",
+        "nombre": "OLIVERA DIAZ NEFTALI NEAL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60038895",
+        "nombre": "VALDEZ MENDOZA SAUL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60052669",
+        "nombre": "CIEZA VEGA RUTH SADIT",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "62584860",
+        "nombre": "VERA OLIVEROS NILTON ABEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "63777720",
+        "nombre": "NARRO DAVALOS JHAN CARLOS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70938559",
+        "nombre": "AVALOS MORALES ROLANDO ALEXIS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72087150",
+        "nombre": "VARGAS GUERRERO NEYLA YIRELLI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72797659",
+        "nombre": "OLIVARES LAIZA FAUSTINO NARCISO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73575670",
+        "nombre": "VARGAS LOLOY SARA BANI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73662018",
+        "nombre": "VASQUEZ HUIMAN KEVIN JUAN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75095518",
+        "nombre": "NARRO RAVELO DANIEL ALEXANDER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75364074",
+        "nombre": "MOSTACERO NAMOC DEYVI EDWIN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76342485",
+        "nombre": "YAJAHUANCA GARCIA GEINER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76775687",
+        "nombre": "MESTANZA TAPIA MARIA NORELY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76932672",
+        "nombre": "CORONEL HEREDIA KEILER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77032457",
+        "nombre": "CHINCHAY LIVIA OLMEDO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "78547224",
+        "nombre": "MENDOZA ALCANTARA JUAN GUSTAVO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "78635158",
+        "nombre": "CRISÓLOGO MENDOZA DENIS MICHAEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "79545185",
+        "nombre": "CRISOLOGO MENDOZA DANY SAUL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80174577",
+        "nombre": "MINCHAN TORRES JOE DICK",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80179120",
+        "nombre": "DE LA CRUZ CRISOLOGO MARIA NELLY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "03329610",
+        "nombre": "CRUZ CORDOVA MANUEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "17625986",
+        "nombre": "SAAVEDRA CARRASCO VILMA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19064727",
+        "nombre": "VARAS VILLALOBOS WALTER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "40930239",
+        "nombre": "MANTILLA GOMEZ ESTHER RAQUEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "40959142",
+        "nombre": "LOPEZ RODRIGUEZ ANA DELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "40965662",
+        "nombre": "VALERA REYES ERMELINDA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "41492148",
+        "nombre": "LEON BENITES ROSA ISABEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42763470",
+        "nombre": "ULLOA CASTILLO TEOFILO LORENZO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43786748",
+        "nombre": "RODRIGUEZ VASQUEZ MARIA EMERITA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43804881",
+        "nombre": "VALDERRAMA RAMIREZ JULIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43914362",
+        "nombre": "CARRION RONDO GREGORIA EUFEMIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44829092",
+        "nombre": "TRUJILLO CORONADO JOAB MOISES",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47347510",
+        "nombre": "CARBAJAL BECERRA LAURA KATHERINE JULISSA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47845070",
+        "nombre": "ROSAS GUERRA DORIS GABI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48742739",
+        "nombre": "MARIN GUZMAN DONA ELIZA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48988640",
+        "nombre": "VALLES TUANAMA ROSA CATALINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "60566141",
+        "nombre": "CHUSHO ROMERO MARCIA JENILCA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61353744",
+        "nombre": "RUIZ VALERA ANA ISABEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61370224",
+        "nombre": "SOLANO LOPEZ OSCAR DAVID",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "62063184",
+        "nombre": "CHUMACERO CAMPOS LEYDI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "63361396",
+        "nombre": "URQUIZA JUAREZ SONIA MARITZA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70183189",
+        "nombre": "RUBIO VASQUEZ ORLANDO FRANCISCO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71255141",
+        "nombre": "SANCHEZ SICCHA SANTOS CATALINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71585231",
+        "nombre": "CORREA VARGAS ELVIS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71585999",
+        "nombre": "GUEVARA LOPEZ LUZ DELMIRA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71603094",
+        "nombre": "COTRINA GUEVARA DEYSI ANABEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71966919",
+        "nombre": "TORRES CACEDA RENATO ALEJANDRO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73767364",
+        "nombre": "CASTILLO VASQUEZ JHONY FRANS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74040525",
+        "nombre": "LOLOY RODRIGUEZ JANET CATERINE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75691852",
+        "nombre": "SANCHEZ LOPEZ ANITA BELEN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75892031",
+        "nombre": "ALVA PALOMINO ROBIN WILLIAN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76151272",
+        "nombre": "CABRERA ANTICONA MABEL KATERINE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76613914",
+        "nombre": "SALDAÑA LEYVA WILMER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77385600",
+        "nombre": "CHUGNAS ROJAS VIVIANA ROSALIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "85004382",
+        "nombre": "85004382",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "17981161",
+        "nombre": "VIDAL CABRERA RAMIRO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18029011",
+        "nombre": "ANGULO RAVELO CARMEN ROSA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18131579",
+        "nombre": "SARE JARA JHONNY CESAR",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18203717",
+        "nombre": "ANTICONA RISCO JESSICA LISBY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18833946",
+        "nombre": "AGUILAR RAMOS MODESTO ALFREDO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19069268",
+        "nombre": "VARELA CALDERON FLORENCIO ANDRES",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19562742",
+        "nombre": "TORIBIO JOAQUIN SANTOS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "26683020",
+        "nombre": "MANTILLA SANGAY MARTIN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "27555861",
+        "nombre": "GARCIA BLANCO MARIA DALILA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "27979012",
+        "nombre": "CANCINO RODAS JAIME",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "40123343",
+        "nombre": "CRUZADO REYES MARIA BALVINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "41133268",
+        "nombre": "SAENZ SIMON MERCEDES MARTHA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42401968",
+        "nombre": "CAPCHA QUINTANA SENAYDA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43390559",
+        "nombre": "AMPUERO SANCHEZ RACIEL CARLOS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43831602",
+        "nombre": "RISCO HUIMAN ANTONIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44020607",
+        "nombre": "REYES INCA JOSE LUIS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44567395",
+        "nombre": "LIZARRAGA RODRIGUEZ JOSIMAR ALEXANDER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "45790300",
+        "nombre": "BLANCO BLANCO BRESILDA MARIVEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46437601",
+        "nombre": "URIOL JARA DIANA YENI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47653794",
+        "nombre": "PEÑA HERRERA LORENA MELISSA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47842073",
+        "nombre": "MENDOZA JUAREZ MARLENE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61089152",
+        "nombre": "SANTAMARIA SUCLUPE MARIA DEL PILAR",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "62790740",
+        "nombre": "LIZARRAGA RODRIGUEZ YAJAIRA LIZBETH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "63257733",
+        "nombre": "HERRERA SANTISTEBAN WILLIAMS EMAEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70541394",
+        "nombre": "RUIZ RODRIGUEZ YNES GRECIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70968122",
+        "nombre": "ALVA SARACHAGA JESÚS MANUEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74476269",
+        "nombre": "KUJI PUANCHIG CHANELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74502844",
+        "nombre": "GIL QUIROZ CLEIDER LISTER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75082212",
+        "nombre": "VALDERRAMA RIVEROS YENIFER YULISA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75951720",
+        "nombre": "AMPUERO SANCHEZ FRANK MICHAEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76554000",
+        "nombre": "DELGADO SANTA MARIA MARIA TERESA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76630584",
+        "nombre": "MIRANDA AZAÑERO SMITH LISBETH",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77331651",
+        "nombre": "BRICEÑO TORRES VILMA NOEMI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80143588",
+        "nombre": "MUÑOZ TARRILLO ALFONSINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "17977385",
+        "nombre": "JULCA JULCA MAURA BALBINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18028837",
+        "nombre": "GUTIERREZ QUEVEDO ELDER CLAUDIO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18107904",
+        "nombre": "AVILA MONTOYA JOSE MILTON",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18224239",
+        "nombre": "SANCHEZ LUJAN ROSA NERY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18903046",
+        "nombre": "ALVA MOSTACERO MARTHA MANUELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19042654",
+        "nombre": "REYES CRUZADO TERESA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19080868",
+        "nombre": "REYES CRUZADO MARIA YSABEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19539528",
+        "nombre": "ARANDA LAGUNA VICTORIA BLANCA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19704067",
+        "nombre": "ARENAS AGUILAR TEOFILO ELEUTERIO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "26642638",
+        "nombre": "AGUILAR SANCHEZ GUILLERMO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "41431388",
+        "nombre": "SICCHA CERNA LUIS ALBERTO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42482166",
+        "nombre": "RODRIGUEZ API HAYDEE GIOVANNA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42717056",
+        "nombre": "ANGEL SAAVEDRA NATIVIDAD",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43260395",
+        "nombre": "ALCANTARA ALCANTARA SAMUEL JESUS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44620179",
+        "nombre": "ARANA FLORES MARUJA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47300869",
+        "nombre": "BACA CABRERA LADY DIANA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47441082",
+        "nombre": "AGUILAR VALIENTE YERTI VANESA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47592296",
+        "nombre": "ARANA FLORES ALEJANDRINA JESUS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61069931",
+        "nombre": "ALVA GUERRA WILLIAM",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "61189668",
+        "nombre": "AREDO ABANTO ABIGAIL MERARI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "62894695",
+        "nombre": "ANGULO PLASENCIA ANGHELO JOEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70274533",
+        "nombre": "AVILA SOTO NICKE KEYSER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70794040",
+        "nombre": "BOCANEGRA RODRIGUEZ JOHAN RAUL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71766956",
+        "nombre": "ALVITREZ SAAVEDRA YORK KENNEDY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71827000",
+        "nombre": "ACEVEDO TORIBIO NELLY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73530089",
+        "nombre": "HENRIQUEZ ARMAS HANDER BORIS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73680390",
+        "nombre": "CABRERA ALFARO GIAN MARCO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74739973",
+        "nombre": "ROJAS PORTAL SEGUNDO RONALD",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74983121",
+        "nombre": "ABANTO ZELADA ABRAHAN MOISES",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76603547",
+        "nombre": "BURGA SAMAME YOSELI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76808750",
+        "nombre": "ARROYO ROJAS YENI ANELY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72890871",
+        "nombre": "72890871",
+        "cargo": "EVALUADOR FITOSANITARIO",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "16626681",
+        "nombre": "CUEVA TORRES MARLENY",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "17868405",
+        "nombre": "BURGOS LAZARO DE TUFINIO JULIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18063391",
+        "nombre": "VALDERRAMA VARAS EDILBERTO ANOR",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18136682",
+        "nombre": "ESPINOZA INFANTES CAROL JACQUELINE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18166748",
+        "nombre": "PASCUAL HERRERA SEMIRA GRABIELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18178020",
+        "nombre": "POLO ACEVEDO ROSA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18198355",
+        "nombre": "NEYRA OLGUIN FREDDY ROBERT",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "18216188",
+        "nombre": "VIGO GUARNIZ EDITH NOEDINN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19099278",
+        "nombre": "RUIZ GARCIA YNOVERTI LEONELI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19248647",
+        "nombre": "TAFUR OCAS MARIA GUILLERMINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19550050",
+        "nombre": "SALVATIERRA AGUILAR SANTOS FELICITA CIRILA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19662720",
+        "nombre": "GOMEZ VILLANUEVA LUISA DE FRANCIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19671826",
+        "nombre": "GARCIA VALENCIA SANTOS BERTHA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "26725990",
+        "nombre": "CASSANA SAUCEDO CRECENCIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "27142789",
+        "nombre": "MURRUGARRA PAREDES SONIA ROSINDA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "27144229",
+        "nombre": "MIRANDA ROJAS ROGER LUCAS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "27147764",
+        "nombre": "LEON SAAVEDRA LUIS ENRIQUE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "27158943",
+        "nombre": "FUENTES CHAVEZ LIVERIADES",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "27566699",
+        "nombre": "VASQUEZ URRUTIA SANTIAGO ALEJANDRO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "33826578",
+        "nombre": "LEON MEDINA ROSA ELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "40032239",
+        "nombre": "HERRERA ALVA FRANCISCO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "40071312",
+        "nombre": "PEÑA PAICO ESTELA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "40499993",
+        "nombre": "CHACON MANTILLA PATRICIA YELI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "41787908",
+        "nombre": "FLORES CARDENAS JOSE ANTONIO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "41919939",
+        "nombre": "PEREZ AMASIFUEN JUANITA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "42468476",
+        "nombre": "CRUZ RODRIGUEZ LAURA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43207607",
+        "nombre": "EUGENIO AGUILAR RAMON",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43333664",
+        "nombre": "VASQUEZ MURGA ANITA RAQUEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43481543",
+        "nombre": "GONZALES MELENDEZ MARIA IRENE",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "43785146",
+        "nombre": "CHOROCO HUAYAC JULIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "44858091",
+        "nombre": "EUGENIO QUISPE SABINA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46020748",
+        "nombre": "GAMBOA SANCHEZ SANTOS SOLEDAD",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46831409",
+        "nombre": "VASQUEZ LIZANA STALIN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47026473",
+        "nombre": "ORRILLO EUGENIO JHOME YONEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47124745",
+        "nombre": "OBESO ANTICONA JOVANA VIRGINIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47167499",
+        "nombre": "ESTRADA GUARNIZ ELSA MARILU",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47258749",
+        "nombre": "ESCOBAR LINARES JAIME ROGER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48238080",
+        "nombre": "MARQUINA MARREROS DINA SARA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48476852",
+        "nombre": "JUAREZ PEZANTES MONICA LUCIA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "62095874",
+        "nombre": "FERNANDEZ VARELA GLADYS ESTHER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "62790711",
+        "nombre": "CUBA VALDERRAMA KEVIN DIEGO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "70417681",
+        "nombre": "BARBA ALVAREZ YEFFERSON JENDERSSON",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "71034167",
+        "nombre": "DIAZ PEREZ JOHANA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72502044",
+        "nombre": "RENGIFO SANCHEZ MARIANELA LISBET",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73113772",
+        "nombre": "PECHE ZEVALLOS FRANKLIN JHONATAN",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "73662007",
+        "nombre": "ALCANTARA RIVAS FREDY ALEXANDER",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74391777",
+        "nombre": "GONZALES PERALTA JOSELITO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "74969322",
+        "nombre": "LOYOLA GORMAS DARWINS FRANCO",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75009137",
+        "nombre": "CUBA VALDERRAMA ESTEFANI GRISET",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76330299",
+        "nombre": "MENDOZA CRUZADO ARSELI YOVANI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76901594",
+        "nombre": "CRUZ CHAVEZ MARICIELO MAYUME",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "77069446",
+        "nombre": "BURGOS CARRANZA MARIA DE LOS ANGELES",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80030894",
+        "nombre": "INFANTE TIRADO DORALIZA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80243146",
+        "nombre": "CUEVA BRAVO ELSA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80374673",
+        "nombre": "PAREDES CASTILLO GENARA ISABEL",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80374680",
+        "nombre": "PAREDES CASTILLO MARIA TOMASA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80408974",
+        "nombre": "PEÑA PAICO LEONARDA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80574840",
+        "nombre": "PONCE PAREDES CARLOS",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "03897413",
+        "nombre": "MOGOLLON CALDERON LOURDES YANET",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "48165335",
+        "nombre": "VASQUEZ EUGENIO HENRY MAGOBER",
+        "cargo": "SCANER",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "14111273",
+        "nombre": "14111273",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "46750073",
+        "nombre": "MORI FLORES IRACEMA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "47594891",
+        "nombre": "PADILLA VASQUEZ DANY ANALI",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "92418493",
+        "nombre": "ASTO CRUZ MARIA FERNANDA",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "76687791",
+        "nombre": "TAFUR NEYRA ALEX IVAN",
+        "cargo": "SUPERVISOR DE COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "01186404",
+        "nombre": "01186404",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "80479533",
+        "nombre": "RUIZ REYES JULIO MICHEL",
+        "cargo": "APLICACION CON MOCHILA-SANIDAD",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "75049955",
+        "nombre": "75049955",
+        "cargo": "CALIDAD",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "00862882",
+        "nombre": "00862882",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "00194316",
+        "nombre": "00194316",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "72890979",
+        "nombre": "72890979",
+        "cargo": "EVALUADOR FITOSANITARIO",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "03775868",
+        "nombre": "03775868",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
+    },
+    {
+        "dni": "19123660",
+        "nombre": "19123660",
+        "cargo": "COSECHA",
+        "fechaIngreso": "10/09/2026"
     }
 ]

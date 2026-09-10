@@ -603,6 +603,16 @@ body.modal-open .emerg-fab {
   color: #374151;
   box-shadow: inset 0 0 0 1px #e5e7eb;
 }
+.pill.live {
+  background: #ecfdf5;
+  color: #047857;
+  box-shadow: inset 0 0 0 1px #a7f3d0;
+}
+.pill.off {
+  background: #fff7ed;
+  color: #c2410c;
+  box-shadow: inset 0 0 0 1px #fed7aa;
+}
 .appbar-progress {
   height: 2px;
   margin: 8px 0 0;
@@ -821,6 +831,27 @@ body.modal-open .emerg-fab {
   color: var(--ink-soft);
 }
 .scan-live.bad { color: var(--red); }
+.scan-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(92px + var(--safe-b));
+  transform: translateX(-50%);
+  z-index: 90;
+  max-width: min(92vw, 340px);
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(17, 17, 17, 0.92);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.3;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.scan-toast.on { opacity: 1; }
 .hit-card[hidden] { display: none !important; }
 .hit-card {
   background: #fff;

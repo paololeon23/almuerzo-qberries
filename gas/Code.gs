@@ -39,7 +39,7 @@
 
 var CACHE_TTL_SEC = 21600;
 var ADMIN_CACHE_SEC = 4;
-var APP_VERSION = "1.4.2";
+var APP_VERSION = "1.4.3";
 var TZ = "America/Lima";
 
 var FUNDOS = ["LICAPA I", "LICAPA II", "LICAPA III"];
@@ -56,6 +56,9 @@ var COLS_TRABAJADORES = [
   "comida",
   "comedor",
   "fundo",
+  "lote_campo",
+  "modulo",
+  "turno_campo",
   "status"
 ];
 
@@ -67,6 +70,9 @@ var COLS_SUPERVISORES = [
   "comida",
   "comedor",
   "fundo",
+  "lote_campo",
+  "modulo",
+  "turno_campo",
   "total_comidas"
 ];
 
@@ -211,7 +217,10 @@ function workerSave(body) {
     );
     var comida = cell(p.comida, 40) || "Almuerzo";
     var comedor = canonSede(p.comedor) || cell(p.comedor, 40);
-    var fundo = canonFundo(p.fundo || p.etapa || p.lote);
+    var fundo = canonFundo(p.fundo || p.etapa);
+    var loteCampo = cell(p.lote_campo, 20);
+    var modulo = cell(p.modulo, 12);
+    var turnoCampo = cell(p.turno_campo, 12);
     var type = String(body.type || "").toLowerCase();
     var extra = type === "extra" || p.extra === true;
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -265,6 +274,9 @@ function workerSave(body) {
           comida: comida,
           comedor: comedor,
           fundo: fundo,
+          lote_campo: loteCampo,
+          modulo: modulo,
+          turno_campo: turnoCampo,
           extra: true,
           status: "confirmed"
         });
@@ -293,6 +305,9 @@ function workerSave(body) {
         comida: comida,
         comedor: comedor,
         fundo: fundo,
+        lote_campo: loteCampo,
+        modulo: modulo,
+        turno_campo: turnoCampo,
         extra: false,
         status: "confirmed"
       });
@@ -305,6 +320,9 @@ function workerSave(body) {
       comida: comida,
       comedor: comedor,
       fundo: fundo,
+      lote_campo: loteCampo,
+      modulo: modulo,
+      turno_campo: turnoCampo,
       total: n
     });
     markSupervisorSent(sid, fecha, comida);
@@ -716,12 +734,19 @@ function markSupervisorSent(sid, fecha, comida) {
 
 function supervisorYaRegistroHoy(ss, sid, fecha) {
   if (!/^\d{8}$/.test(sid) || !fecha) return false;
-  var cache = CacheService.getScriptCache();
+  // Solo hojas reales. La caché sola provocaba "ya enviado" falso → Extra con Lista 0.
+  if (supervisorIdEnHojaSupervisores(ss, sid, fecha)) {
+    markSupervisorSent(sid, fecha, "Almuerzo");
+    return true;
+  }
+  if (supervisorSentInPeople(ensurePersonSheet(ss, "Trabajadores"), sid, fecha)) {
+    markSupervisorSent(sid, fecha, "Almuerzo");
+    return true;
+  }
   try {
-    if (cache.get(supervisorSentKey(sid, fecha, "Almuerzo"))) return true;
-  } catch (e) { /* sigue a las hojas */ }
-  if (supervisorIdEnHojaSupervisores(ss, sid, fecha)) return true;
-  return supervisorSentInPeople(ensurePersonSheet(ss, "Trabajadores"), sid, fecha);
+    CacheService.getScriptCache().remove(supervisorSentKey(sid, fecha, "Almuerzo"));
+  } catch (e) { /* ignore */ }
+  return false;
 }
 
 function supervisorIdEnHojaSupervisores(ss, sid, fecha) {
@@ -773,6 +798,9 @@ function writePeople(pack, people, meta) {
       comida: meta.comida,
       comedor: meta.comedor,
       fundo: meta.fundo,
+      lote_campo: meta.lote_campo,
+      modulo: meta.modulo,
+      turno_campo: meta.turno_campo,
       status: meta.status || "confirmed"
     }));
   }
@@ -915,6 +943,9 @@ function supervisorRow(pack, rec) {
   setCol(pack, row, "comida", rec.comida);
   setCol(pack, row, "comedor", rec.comedor);
   setCol(pack, row, "fundo", rec.fundo);
+  setCol(pack, row, "lote_campo", rec.lote_campo);
+  setCol(pack, row, "modulo", rec.modulo);
+  setCol(pack, row, "turno_campo", rec.turno_campo);
   setCol(pack, row, "total_comidas", rec.total);
   return row;
 }
@@ -932,6 +963,9 @@ function reservaRow(pack, rec) {
   setCol(pack, row, "comida", rec.comida);
   setCol(pack, row, "comedor", rec.comedor);
   setCol(pack, row, "fundo", rec.fundo);
+  setCol(pack, row, "lote_campo", rec.lote_campo);
+  setCol(pack, row, "modulo", rec.modulo);
+  setCol(pack, row, "turno_campo", rec.turno_campo);
   setCol(pack, row, "status", rec.status || "confirmed");
   return row;
 }
