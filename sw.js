@@ -1,4 +1,4 @@
-const CACHE_NAME = "cocina-qb-v175";
+const CACHE_NAME = "cocina-qb-v186";
 
 const PRECACHE = [
   "./",
@@ -17,7 +17,6 @@ const PRECACHE = [
   "./data/config.json",
   "./data/supervisors.json",
   "./data/trabajadores.json",
-  "./data/lotes.json",
   "./assets/logo-qberries.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -131,7 +130,7 @@ self.addEventListener("fetch", (event) => {
       return netFetch(req).then((res) => {
         putInCache(req, res);
         return res;
-      });
+      }).catch(() => fromCache(req));
     })
   );
 });

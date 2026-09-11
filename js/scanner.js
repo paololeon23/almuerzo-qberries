@@ -17,6 +17,7 @@ export class FieldScanner {
     this.videoEl = null;
     this.onCode = null;
     this.onBusy = null;
+    this.pending = null;
     this._jsqrPromise = null;
     this._tickRunning = false;
   }
@@ -51,14 +52,17 @@ export class FieldScanner {
 
   resume() {
     this.paused = false;
+    this._flushPending();
   }
 
   setBusy(on) {
-    this.busy = !!on;
+    const next = !!on;
+    this.busy = next;
+    if (!next) this._flushPending();
   }
 
-  /** Bloquea emisiones unos ms tras un hit. */
-  lock(ms = 900) {
+  /** No bloquea otros códigos. Se mantiene por compatibilidad. */
+  lock(ms = 0) {
     this.lockUntil = Date.now() + Math.max(0, Number(ms) || 0);
   }
 
@@ -88,7 +92,7 @@ export class FieldScanner {
     if (this.isLiveOn(videoEl)) {
       this.bindHandlers(onCode, onBusy);
       this.paused = false;
-      // No resetear busy: un proceso activo debe seguir bloqueado.
+      this._flushPending();
       if (!this.timer && !this._tickRunning) this._scheduleTick(this.gen);
       return true;
     }
@@ -98,6 +102,7 @@ export class FieldScanner {
     this.active = true;
     this.paused = false;
     this.busy = false;
+    this.pending = null;
     this.videoEl = videoEl;
     this.bindHandlers(onCode, onBusy);
 
@@ -173,11 +178,9 @@ export class FieldScanner {
     let nextDelay = 100;
     try {
       if (!videoEl) return;
-      const now = Date.now();
-      const locked = now < this.lockUntil;
       const hold = this.paused;
 
-      if (!hold && !locked && videoEl.readyState >= 2 && videoEl.videoWidth) {
+      if (!hold && videoEl.readyState >= 2 && videoEl.videoWidth) {
         const vw = videoEl.videoWidth;
         const vh = videoEl.videoHeight;
         const side = Math.min(vw, vh);
@@ -193,7 +196,10 @@ export class FieldScanner {
         let value = "";
         if (this.detector) {
           try {
-            const codes = await this.detector.detect(this.canvas);
+            const codes = await Promise.race([
+              this.detector.detect(this.canvas),
+              new Promise((_, reject) => window.setTimeout(() => reject(new Error("detect_timeout")), 400)),
+            ]);
             if (gen !== this.gen || !this.active) return;
             value = String(codes?.[0]?.rawValue || "").trim();
           } catch {
@@ -210,9 +216,9 @@ export class FieldScanner {
           }
         }
         if (value) this._emit(value, gen);
-        nextDelay = this.busy ? 160 : 95;
+        nextDelay = this.busy ? 80 : 55;
       } else {
-        nextDelay = hold || locked || this.busy ? 160 : 110;
+        nextDelay = hold ? 110 : (this.busy ? 90 : 70);
       }
     } finally {
       this._tickRunning = false;
@@ -220,6 +226,19 @@ export class FieldScanner {
         this.timer = setTimeout(() => this._tick(gen), nextDelay);
       }
     }
+  }
+
+  _flushPending() {
+    const p = this.pending;
+    if (!p || this.busy || this.paused || !this.active) return;
+    this.pending = null;
+    queueMicrotask(() => {
+      if (this.busy || this.paused || !this.active) {
+        if (!this.pending) this.pending = p;
+        return;
+      }
+      this._emit(p.text, this.gen);
+    });
   }
 
   _emit(value, gen) {
@@ -231,37 +250,49 @@ export class FieldScanner {
     if (!key) return;
 
     if (this.busy) {
-      if (now - this.lastBusyNotify >= 1400) {
+      const current = this.emitKey(this.lastCode);
+      if (key !== current) this.pending = { text, key };
+      if (key !== current && now - this.lastBusyNotify >= 1200) {
         this.lastBusyNotify = now;
         try { this.onBusy?.(text, key); } catch { /* ignore */ }
       }
       return;
     }
 
-    if (now < this.lockUntil) return;
-
     const prev = this.seen.get(key) || 0;
-    if (now - prev < 2000) return;
-    if (this.seen.size > 50) {
+    if (now - prev < 700) return;
+    if (this.seen.size > 80) {
       for (const [k, t] of this.seen) {
-        if (now - t > 12000) this.seen.delete(k);
+        if (now - t > 8000) this.seen.delete(k);
       }
     }
     this.seen.set(key, now);
     this.lastCode = text;
     this.lastAt = now;
-    this.lock(400);
     try {
-      this.onCode?.(text, key);
+      const ret = this.onCode?.(text, key);
+      if (ret && typeof ret.then === "function") ret.catch(() => {});
     } catch {
       /* no tumbar el loop */
     }
+  }
+
+  forget(text) {
+    const key = this.emitKey(text);
+    if (key) this.seen.delete(key);
+    if (key && this.emitKey(this.lastCode) === key) {
+      this.lastCode = "";
+      this.lastAt = 0;
+    }
+    if (key && this.pending && this.pending.key === key) this.pending = null;
+    this.lockUntil = 0;
   }
 
   async stop(keepGen = false) {
     this.active = false;
     this.paused = false;
     this.busy = false;
+    this.pending = null;
     this.onCode = null;
     this.onBusy = null;
     this._tickRunning = false;

@@ -3,7 +3,7 @@ import { bindAppHeight, bindFieldLock, isFieldDevice, preventBounce } from "./de
 import { recordsOfToday, store } from "./store.js";
 import { onVoiceState, setVoiceEnabled, speak, speakPersonName, prepareSpeakName, unlockVoice, voiceEnabled, isSpeaking } from "./voice.js";
 import { computeHeadcount } from "./calc.js";
-import { checkTurno, flushQueue, pingServer, saveAndSync } from "./sync.js";
+import { checkTurno, flushQueue, pingServer, saveAndSync, startAutoSync } from "./sync.js";
 import { FieldScanner } from "./scanner.js";
 
 const scanner = new FieldScanner();
@@ -99,6 +99,8 @@ const state = {
   lastDetectedQR: "",
   lastProcessedQR: "",
   lastProcessedAt: 0,
+  lastRepeatQR: "",
+  lastRepeatAt: 0,
   scanTimestamp: 0,
   scanWaitSpeakAt: 0,
   scanToastTimer: 0,
@@ -120,7 +122,6 @@ const state = {
   histOpen: "",
   histPeoplePage: 1,
   histPeopleQuery: "",
-  lotes: [],
   swGuardUntil: 0,
   handlingScan: false,
   isProcessing: false,
@@ -146,11 +147,16 @@ function freshFetch() {
 }
 
 async function loadJson(path, fallback) {
+  const ctrl = new AbortController();
+  const timer = window.setTimeout(() => ctrl.abort(), 8000);
   try {
-    const res = await fetch(path, { cache: freshFetch() });
+    const res = await fetch(path, { cache: freshFetch(), signal: ctrl.signal });
+    if (!res.ok) return fallback;
     return await res.json();
   } catch {
     return fallback;
+  } finally {
+    window.clearTimeout(timer);
   }
 }
 
@@ -229,7 +235,11 @@ async function loadTrabajadores() {
 
 function ensureWorkers() {
   if (state.wrkByDni.size) return Promise.resolve();
-  if (!state.workersPromise) state.workersPromise = loadTrabajadores();
+  if (!state.workersPromise) {
+    state.workersPromise = loadTrabajadores().finally(() => {
+      if (!state.wrkByDni.size) state.workersPromise = null;
+    });
+  }
   return state.workersPromise;
 }
 
@@ -406,7 +416,8 @@ function hasNormalSend(comida = currentLote()) {
 }
 
 function hasSavedSend(comida = currentLote()) {
-  return dayAlreadySent(comida);
+  // Extra vale con el almuerzo ya en cola (sin señal) o ya confirmado en el servidor.
+  return hasNormalSend(comida);
 }
 
 async function syncTurnoDelDia({ timeoutMs = 2800 } = {}) {
@@ -439,7 +450,33 @@ async function syncTurnoDelDia({ timeoutMs = 2800 } = {}) {
 }
 
 function refreshHomeLock() {
-  if (state.view === "home") show("home", { replace: true, silent: true });
+  if (state.view !== "home") return;
+  const shell = document.querySelector("#app .shell");
+  const cam = document.getElementById("cam");
+  if (!shell || !cam) {
+    show("home", { replace: true, silent: true });
+    return;
+  }
+  const locked = isSendLocked();
+  shell.classList.toggle("is-locked", locked);
+  const live = document.getElementById("scan-live");
+  if (live) {
+    if (locked) {
+      live.textContent = "Ya envió. Pulse Extra si alguien se olvidó o llegó tarde.";
+      live.classList.add("bad");
+    } else if (state.extraOn) {
+      live.textContent = "Extra: lista vacía. Acerca el QR de quien falta.";
+      live.classList.remove("bad");
+    }
+  }
+  const extraBtn = document.querySelector('.lote-pills [data-act="toggle-extra"]');
+  const mealBtn = document.querySelector('.lote-pills [data-act="set-lote"]');
+  if (extraBtn) extraBtn.classList.toggle("on", !!state.extraOn);
+  if (mealBtn) mealBtn.classList.toggle("on", !state.extraOn);
+  const send = document.querySelector('[data-act="go-summary"]');
+  if (send) send.disabled = !getMesa().length || locked;
+  if (locked) scanner.stop();
+  refreshPendPill();
 }
 
 function isSendLocked() {
@@ -449,7 +486,7 @@ function isSendLocked() {
 function warnLocked() {
   showAlert(
     "Ya envió",
-    `El ${currentLote().toLowerCase()} de hoy ya se envió. Pulse Extra si alguien se olvidó o llegó tarde. Eso entra en Comidas extras.`
+    `El ${currentLote().toLowerCase()} de hoy ya se envió. Pulse Extra si alguien se olvidó o llegó tarde.`
   );
 }
 
@@ -462,7 +499,7 @@ function toggleExtra() {
     return;
   }
   if (!hasSavedSend()) {
-    showAlert("Todavía no", "Primero envíe el pedido del turno. Extra sale cuando el servidor ya guardó ese envío.");
+    showAlert("Todavía no", "Primero envíe el almuerzo del turno. Después puede mandar extras, también sin señal.");
     return;
   }
   // Extra siempre arranca vacío. No se carga el almuerzo del supervisor.
@@ -992,8 +1029,8 @@ function loteCard() {
   const extra = !!state.extraOn;
   return `<section class="section-card">
     ${extra ? `<p class="extra-note">Modo extra activo. Se olvidó o llegó tarde. Va a Comidas extras.</p>` : ""}
-    ${locked ? `<p class="extra-note">Ya envió el almuerzo hoy. Todo está bloqueado. Pulse Extra para olvidados o tardanzas.</p>` : ""}
-    ${!locked && !extra && !navigator.onLine ? `<p class="extra-note">Sin señal. Puede escanear y enviar. Queda pendiente en este celular hasta tener internet.</p>` : ""}
+    ${locked ? `<p class="extra-note">Ya envió el almuerzo. Pulse Extra si falta alguien.</p>` : ""}
+    ${!locked && !extra && !navigator.onLine ? `<p class="extra-note">Sin señal. Puede escanear y enviar.</p>` : ""}
     ${sectionHead("Turno", extra ? "Escanee solo a quien falta. Entra como extra." : "Almuerzo o Extra. Después presente el QR de cada persona.")}
     ${lotePills()}
   </section>`;
@@ -1027,75 +1064,6 @@ function currentComedor() {
   const list = comedores();
   const saved = store.getPrefs().comedor;
   return list.includes(saved) ? saved : list[0];
-}
-
-function mapLote(row) {
-  const lote = String(row?.lote || "").replace(/\D/g, "") || String(row?.codLote || "").replace(/\D/g, "");
-  const modulo = String(row?.modulo || "").toUpperCase().replace(/\s+/g, "");
-  const turno = String(row?.turno || "").replace(/^T/i, "").trim();
-  const codLote = String(row?.codLote || (lote ? `Q${lote}` : "")).trim();
-  if (!codLote && !lote) return null;
-  return {
-    codLote: codLote || `Q${lote}`,
-    lote,
-    modulo,
-    turno,
-    variedad: String(row?.variedad || "").trim(),
-  };
-}
-
-async function loadLotes() {
-  const raw = await loadJson("./data/lotes.json", []);
-  const list = Array.isArray(raw) ? raw : (raw.lotes || []);
-  const map = new Map();
-  for (const row of list) {
-    const item = mapLote(row);
-    if (item) map.set(item.codLote, item);
-  }
-  state.lotes = [...map.values()];
-}
-
-function campoLotes() {
-  const list = Array.isArray(state.lotes) ? state.lotes : [];
-  if (list.length) {
-    return [...list].sort((a, b) => Number(a.lote) - Number(b.lote) || String(a.codLote).localeCompare(String(b.codLote)));
-  }
-  return [];
-}
-
-function loteOptionLabel(row) {
-  const bits = [`L${row.lote || row.codLote}`];
-  if (row.modulo) bits.push(row.modulo);
-  if (row.turno) bits.push(`T${row.turno}`);
-  return bits.join(" · ");
-}
-
-function currentCampoLote() {
-  const list = campoLotes();
-  const saved = store.getPrefs().campoLote;
-  return list.some((r) => r.codLote === saved) ? saved : (list[0]?.codLote || "");
-}
-
-function currentCampoLoteLabel() {
-  const id = currentCampoLote();
-  const row = campoLotes().find((r) => r.codLote === id);
-  return row ? loteOptionLabel(row) : id;
-}
-
-function currentCampoLoteRow() {
-  const id = currentCampoLote();
-  return campoLotes().find((r) => r.codLote === id) || null;
-}
-
-function campoMeta() {
-  const row = currentCampoLoteRow();
-  if (!row) return {};
-  return {
-    lote_campo: row.lote || "",
-    modulo: row.modulo || "",
-    turno_campo: row.turno || "",
-    lote_label: loteOptionLabel(row),
-  };
 }
 
 function pickNorm(s) {
@@ -1237,7 +1205,7 @@ function showSummaryModal() {
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
       <div class="summary-top">
-        ${sectionHead("Solicitud de almuerzo", state.extraOn ? "Entra como extra (se olvidó o llegó tarde). Va a Comidas extras." : "Confirme fundo, comedor y lote antes de enviar.")}
+        ${sectionHead("Solicitud de almuerzo", state.extraOn ? "Entra como extra (se olvidó o llegó tarde). Va a Comidas extras." : "Confirme fundo y comedor antes de enviar.")}
       </div>
       <div class="summary-stat">
         <b>${n}</b>
@@ -1253,10 +1221,6 @@ function showSummaryModal() {
           <p class="pick-label">Comedor</p>
           ${pickSelect("sel-comedor", currentComedor(), comedorOpts)}
         </div>
-        ${campoLotes().length ? `<div class="pick-field">
-          <p class="pick-label">Lote · módulo · turno</p>
-          ${pickSelect("sel-campo-lote", currentCampoLote(), campoLotes().map((r) => [r.codLote, loteOptionLabel(r)]), true)}
-        </div>` : ""}
       </div>
       <div class="footer-actions">
         <button class="btn ghost" data-act="dismiss-alert" type="button">Cerrar</button>
@@ -1312,13 +1276,33 @@ function alertIsOpen() {
 
 function resumeCam() {
   if (state.loggingIn) return;
-  if (state.view !== "supervisor") return;
+  if (state.view !== "supervisor" && state.view !== "home") return;
   const video = document.getElementById("cam");
   if (video?.srcObject && scanner.active) {
+    scanner.resume();
+    scanner.setBusy(!!state.isProcessing);
     video.play().catch(() => {});
     return;
   }
   startCamHere();
+}
+
+function unlockWorkerScan(dni) {
+  const key = normalizeDni(dni) || scanner.emitKey(dni);
+  if (key && (normalizeDni(state.lastProcessedQR) === key || state.lastProcessedQR === key)) {
+    state.lastProcessedQR = "";
+    state.lastProcessedAt = 0;
+  }
+  if (key && state.lastRepeatQR === key) {
+    state.lastRepeatQR = "";
+    state.lastRepeatAt = 0;
+  }
+  if (key && state.lastDetectedQR === key) state.lastDetectedQR = "";
+  scanner.forget(key || dni);
+  state.handlingScan = false;
+  state.isProcessing = false;
+  scanner.setBusy(false);
+  resumeCam();
 }
 
 function welcomeView() {
@@ -1420,18 +1404,64 @@ function hideScanToast() {
   document.getElementById("scan-toast")?.classList.remove("on");
 }
 
-function notifyScanWait() {
-  showScanToast("Un momento, espere para escanear nuevamente.");
-  setScanLive("Procesando… Un momento.", false);
+function personOnMesa(dni) {
+  const key = normalizeDni(dni);
+  if (!key) return null;
+  const row = getMesa().find((p) => normalizeDni(p.id) === key);
+  if (!row) return null;
+  return findWorkerByDni(key) || personFromSaved(key) || {
+    dni: key,
+    id: key,
+    apellido: row.apellido || "",
+    nombre: row.nombre || "",
+    cargo: row.cargo || "",
+    temporal: !!row.temporal,
+  };
+}
+
+function warnRepeatedPerson(dni, worker = null) {
+  const key = normalizeDni(dni) || String(dni || "");
   const now = Date.now();
-  // No flush: no cortar el nombre que se está diciendo.
+  if (key && key === state.lastProcessedQR && now - (state.lastProcessedAt || 0) < 1100) {
+    return;
+  }
+  if (key && key === state.lastRepeatQR && now - (state.lastRepeatAt || 0) < 2500) return;
+  state.lastRepeatQR = key;
+  state.lastRepeatAt = now;
+  const who = worker || personOnMesa(key);
+  const nombre = who
+    ? (prepareSpeakName(who) || twoApellidos(who) || "Persona")
+    : "Persona";
+  try {
+    showScanHit({
+      dni: key || "—",
+      nombre,
+      cargo: who ? [nameParts(who).nombre, who.cargo].filter(Boolean).join(" · ") : "Ya está en la lista",
+      ok: false,
+      stateLabel: "Repetida",
+      note: "Persona repetida.",
+    });
+    showScanToast("Persona repetida.");
+    speak("Persona repetida.", { flush: true });
+  } catch { /* voz/UI no bloquean el siguiente QR */ }
+}
+
+function notifyScanWait() {
+  showScanToast("Un momento, intenta con otro.");
+  setScanLive("Un momento.", false);
+  const now = Date.now();
   if (now - (state.scanWaitSpeakAt || 0) > 2800 && !isSpeaking()) {
     state.scanWaitSpeakAt = now;
-    speak("Un momento.");
+    try { speak("Un momento."); } catch { /* voz no bloquea */ }
   }
 }
 
 function onScanBusy(_raw, key) {
+  const dni = normalizeDni(key);
+  if (state.scanMode === "wrk" && dni && personOnMesa(dni)) {
+    warnRepeatedPerson(dni);
+    return;
+  }
   if (!state.isProcessing && !state.handlingScan) return;
   if (key && key === state.lastDetectedQR) return;
   notifyScanWait();
@@ -1457,18 +1487,40 @@ function setMesa(list) {
 }
 
 function upsertMesa(person) {
-  setMesa([person, ...getMesa().filter((p) => p.id !== person.id)]);
+  const id = normalizeDni(person.id || person.dni);
+  if (!id) return;
+  const row = { ...person, id, dni: person.dni || id };
+  setMesa([row, ...getMesa().filter((p) => normalizeDni(p.id) !== id)]);
 }
 
 function removeMesaPerson(id) {
+  const key = normalizeDni(id);
+  if (!key) return;
   const day = todayKey(TZ);
-  setMesa(getMesa().filter((p) => p.id !== id));
-  store.removeCola(`scan:${day}:${id}`);
+  setMesa(getMesa().filter((p) => normalizeDni(p.id) !== key));
+  store.removeCola(`scan:${day}:${key}`);
   for (const r of store.getCola()) {
-    if ((r.type === "pedido" || r.type === "especial") && r.payload?.trabajador_id === id) {
+    if ((r.type === "pedido" || r.type === "especial") && normalizeDni(r.payload?.trabajador_id) === key) {
       store.removeCola(r.clientId);
     }
   }
+}
+
+function askDropMesa(id, name) {
+  const dni = normalizeDni(id);
+  if (!dni) return;
+  const who = getMesa().find((p) => normalizeDni(p.id) === dni);
+  const label = String(name || who?.apellido || twoApellidos(who) || dni).trim();
+  openAlert(`<div class="modal-back" data-act="dismiss-alert">
+    <div class="modal" role="dialog" aria-modal="true" data-act="stay">
+      <h3>¿Quitar de la lista?</h3>
+      <p>${esc(label)} · DNI ${esc(dni)}</p>
+      <div class="footer-actions">
+        <button class="btn ghost" data-act="dismiss-alert" type="button">No</button>
+        <button class="btn" data-act="drop-mesa" data-id="${esc(dni)}" type="button">Quitar</button>
+      </div>
+    </div>
+  </div>`);
 }
 
 function refreshPendPill() {
@@ -1515,14 +1567,13 @@ function offerSupervisorOwnLunch(person) {
   if (state.extraOn || hasSavedSend() || isSendLocked()) return;
   const worker = supervisorAsMealPerson(person);
   if (!worker) return;
-  registerPerson(worker, { silent: true }).then(() => {
-    if (state.extraOn || hasSavedSend() || isSendLocked()) {
-      store.clearMesa();
-      return;
-    }
-    refreshMesaUi();
-    showSupervisorLunchModal(worker);
-  });
+  registerPerson(worker, { silent: true });
+  if (state.extraOn || hasSavedSend() || isSendLocked()) {
+    store.clearMesa();
+    return;
+  }
+  refreshMesaUi();
+  showSupervisorLunchModal(worker);
 }
 
 function showSupervisorLunchModal(worker) {
@@ -1869,7 +1920,7 @@ function showLoginGate(person) {
   requestAnimationFrame(tick);
 }
 
-function showScanHit({ dni = "—", nombre = "—", cargo = "—", ok = true, note = "" }) {
+function showScanHit({ dni = "—", nombre = "—", cargo = "—", ok = true, note = "", stateLabel = "" }) {
   const host = document.getElementById("scan-hit");
   if (host) {
     host.hidden = false;
@@ -1877,7 +1928,7 @@ function showScanHit({ dni = "—", nombre = "—", cargo = "—", ok = true, no
     host.innerHTML = `
       <div class="hit-top">
         <span class="hit-label">Identificación</span>
-        <span class="hit-state">${ok ? "Confirmado" : "No autorizado"}</span>
+        <span class="hit-state">${esc(stateLabel || (ok ? "Confirmado" : "No autorizado"))}</span>
       </div>
       <p class="hit-dni">DNI ${esc(dni)}</p>
       <h3 class="hit-name">${esc(nombre || "—")}</h3>
@@ -2018,7 +2069,7 @@ function syncView() {
     <div class="scroll">
       <p class="hello">${n ? "Por enviar" : "Todo enviado"}</p>
       <p class="sub">${state.online
-        ? (n ? "Hay señal. Toca enviar." : "No queda nada pendiente.")
+        ? (n ? "Hay señal. Toca enviar." : "Todo enviado.")
         : "Sin señal. Los pedidos están guardados en este celular."}</p>
       ${speakBar()}
       <div class="stat"><em>Pendientes</em><b>${n}</b></div>
@@ -2206,7 +2257,6 @@ function scanPayload(worker) {
     comida: currentLote(),
     comedor: currentComedor(),
     platos_detalle: currentLote(),
-    ...campoMeta(),
   };
 }
 
@@ -2226,28 +2276,46 @@ async function saveScanRecord(worker) {
   return { ...result, already: false };
 }
 
-async function registerPerson(worker, { silent = false } = {}) {
-  const onMesa = getMesa().find((p) => p.id === worker.dni);
-  upsertMesa({
-    id: worker.dni,
-    apellido: twoApellidos(worker),
-    nombre: nameParts(worker).nombre || worker.nombreCompleto || worker.nombre,
-    cargo: worker.cargo || worker.area || "",
-    temporal: !!worker.temporal,
-    status: "lista",
-    plato: "",
-  });
-  store.touchReciente({ ...worker, kind: "wrk" });
-  rememberDni(worker);
-  state.mesaPage = 1;
-  if (!silent) speakPersonName(worker);
-  return { result: { status: "lista" }, already: !!onMesa, ok: true };
+function registerPerson(worker, { silent = false } = {}) {
+  try {
+    const dni = normalizeDni(worker.dni || worker.id);
+    const onMesa = getMesa().some((p) => normalizeDni(p.id) === dni);
+    upsertMesa({
+      id: dni,
+      apellido: twoApellidos(worker),
+      nombre: nameParts(worker).nombre || worker.nombreCompleto || worker.nombre,
+      cargo: worker.cargo || worker.area || "",
+      temporal: !!worker.temporal,
+      status: "lista",
+      plato: "",
+    });
+    state.mesaPage = 1;
+    if (!silent) {
+      try { speakPersonName(worker); } catch { /* voz no bloquea el escaneo */ }
+    }
+    queueMicrotask(() => {
+      try {
+        store.touchReciente({ ...worker, kind: "wrk", id: dni });
+        rememberDni(worker);
+      } catch { /* local secundario */ }
+    });
+    return { result: { status: "lista" }, already: onMesa, ok: true };
+  } catch {
+    return { result: { status: "error" }, already: false, ok: false };
+  }
 }
 
 function markProcessedQR(key) {
   if (!key) return;
   state.lastProcessedQR = key;
   state.lastProcessedAt = Date.now();
+}
+
+function releaseScan(opId) {
+  if (opId != null && opId !== state.scanOpId) return;
+  state.handlingScan = false;
+  state.isProcessing = false;
+  scanner.setBusy(false);
 }
 
 async function onScan(raw, keyFromScanner) {
@@ -2257,12 +2325,26 @@ async function onScan(raw, keyFromScanner) {
   const now = Date.now();
 
   if (state.isProcessing || state.handlingScan) {
+    const dniBusy = normalizeDni(key);
+    if (state.scanMode === "wrk" && dniBusy && personOnMesa(dniBusy)) {
+      warnRepeatedPerson(dniBusy);
+      return;
+    }
     if (key && key !== state.lastDetectedQR) notifyScanWait();
     return;
   }
 
-  // Mismo QR aún frente a la cámara: no reprocesar en bucle
-  if (key && key === state.lastProcessedQR && now - state.lastProcessedAt < 2800) {
+  if (state.scanMode === "wrk" && key) {
+    const dniKey = normalizeDni(key);
+    const already = dniKey ? personOnMesa(dniKey) : null;
+    if (already) {
+      warnRepeatedPerson(dniKey, already);
+      scanner.forget(dniKey);
+      return;
+    }
+  }
+
+  if (key && key === state.lastProcessedQR && now - state.lastProcessedAt < 900) {
     return;
   }
 
@@ -2272,36 +2354,82 @@ async function onScan(raw, keyFromScanner) {
   state.lastDetectedQR = key || String(raw || "").trim();
   state.scanTimestamp = now;
   scanner.setBusy(true);
-  setScanLive("Procesando…");
+  const watchdog = window.setTimeout(() => {
+    releaseScan(opId);
+  }, 2500);
 
   let processedOk = false;
   try {
-    processedOk = await handleOneScan(raw, opId);
+    const result = handleOneScan(raw, opId);
+    processedOk = result && typeof result.then === "function" ? await result : !!result;
   } catch {
     processedOk = false;
   } finally {
-    if (opId !== state.scanOpId) return;
-    if (processedOk && state.lastDetectedQR) {
-      markProcessedQR(state.lastDetectedQR);
-    }
-    state.handlingScan = false;
-    state.isProcessing = false;
-    scanner.setBusy(false);
-    scanner.lock(800);
-    hideScanToast();
-    if (state.view === "home" || state.view === "supervisor") {
-      if (!(state.scanMode === "wrk" && isSendLocked())) {
-        setScanLive("Listo. Acerca el siguiente QR.");
+    window.clearTimeout(watchdog);
+    releaseScan(opId);
+    if (opId === state.scanOpId) {
+      if (processedOk && state.lastDetectedQR) {
+        markProcessedQR(state.lastDetectedQR);
+        scanner.forget(state.lastDetectedQR);
       }
-    }
-    refreshPendPill();
-    if (state.view === "home" && processedOk && state.scanMode === "wrk") {
-      refreshMesaUi();
+      const keepRepeat = Date.now() - (state.lastRepeatAt || 0) < 800;
+      if (!keepRepeat) {
+        hideScanToast();
+        if (state.view === "home" || state.view === "supervisor") {
+          if (!(state.scanMode === "wrk" && isSendLocked())) {
+            setScanLive("Listo. Siguiente.");
+          }
+        }
+      }
+      if (state.view === "home" && processedOk && state.scanMode === "wrk") {
+        window.requestAnimationFrame(() => {
+          if (state.view === "home") refreshMesaUi();
+        });
+      } else {
+        refreshPendPill();
+      }
     }
   }
 }
 
-async function handleOneScan(raw, opId) {
+function completeWorkerScan(worker, dni, opId) {
+  if (opId !== state.scanOpId) return false;
+  if (!worker) {
+    try {
+      showScanHit({
+        dni,
+        nombre: "No está en la lista",
+        cargo: "No figura en trabajadores",
+        ok: false,
+        note: "Ese DNI no está en trabajadores. Use el ícono si es temporal.",
+      });
+      speak("No está en la lista.", { flush: true });
+    } catch { /* UI/voz no tumba el escáner */ }
+    return true;
+  }
+
+  if (personOnMesa(worker.dni)) {
+    warnRepeatedPerson(worker.dni, worker);
+    return true;
+  }
+
+  const saved = registerPerson(worker);
+  if (opId !== state.scanOpId) return false;
+  if (!saved?.ok) return false;
+  try {
+    showScanHit({
+      dni: worker.dni,
+      nombre: prepareSpeakName(worker) || twoApellidos(worker),
+      cargo: [nameParts(worker).nombre, worker.cargo].filter(Boolean).join(" · "),
+      ok: true,
+      note: "Registrado. Siguiente.",
+    });
+  } catch { /* tarjeta de UI opcional */ }
+  return true;
+}
+
+function handleOneScan(raw, opId) {
+  try {
   if (state.loggingIn) return false;
   if (opId !== state.scanOpId) return false;
   if (alertIsOpen()) return false;
@@ -2309,8 +2437,10 @@ async function handleOneScan(raw, opId) {
   const parsed = parseQr(raw);
   const dni = parsed?.dni || parsed?.id || "";
   if (!parsed || !dni) {
-    speak("Código no válido. Solo el DNI.", { flush: true });
-    showScanHit({ dni: "—", nombre: "No se leyó un DNI", cargo: "—", ok: false, note: "Acerca el código de nuevo." });
+    try {
+      speak("Código no válido. Solo el DNI.", { flush: true });
+      showScanHit({ dni: "—", nombre: "No se leyó un DNI", cargo: "—", ok: false, note: "Acerca el código de nuevo." });
+    } catch { /* */ }
     return false;
   }
   if (opId !== state.scanOpId) return false;
@@ -2323,20 +2453,34 @@ async function handleOneScan(raw, opId) {
       return true;
     }
     if (state.emergencyPending) {
-      try { await ensureWorkers(); } catch { /* entra igual */ }
-      if (opId !== state.scanOpId) return false;
-      const worker = findWorkerByDni(dni);
-      enterEmergencySupervisor(worker || { dni, id: dni });
-      return true;
+      const known = findWorkerByDni(dni);
+      if (known || state.wrkByDni.size) {
+        enterEmergencySupervisor(known || { dni, id: dni });
+        return true;
+      }
+      return Promise.race([
+        ensureWorkers(),
+        new Promise((resolve) => window.setTimeout(resolve, 1500)),
+      ]).then(() => {
+        if (opId !== state.scanOpId) return false;
+        enterEmergencySupervisor(findWorkerByDni(dni) || { dni, id: dni });
+        return true;
+      }).catch(() => {
+        if (opId !== state.scanOpId) return false;
+        enterEmergencySupervisor({ dni, id: dni });
+        return true;
+      });
     }
-    speak("No autorizado.", { flush: true });
-    showScanHit({
-      dni,
-      nombre: "No autorizado",
-      cargo: "No está en supervisores de cosecha",
-      ok: false,
-      note: "Ese DNI no está en la lista autorizada. Si es emergencia, use el botón rojo.",
-    });
+    try {
+      speak("No autorizado.", { flush: true });
+      showScanHit({
+        dni,
+        nombre: "No autorizado",
+        cargo: "No está en supervisores de cosecha",
+        ok: false,
+        note: "Ese DNI no está en la lista autorizada. Si es emergencia, use el botón rojo.",
+      });
+    } catch { /* */ }
     return true;
   }
 
@@ -2345,51 +2489,30 @@ async function handleOneScan(raw, opId) {
     return true;
   }
 
-  try {
-    await ensureWorkers();
-  } catch { /* catálogo local / offline */ }
-  if (opId !== state.scanOpId) return false;
-
   const worker = findWorkerByDni(dni) || personFromSaved(dni);
-  if (!worker) {
-    showScanHit({
-      dni,
-      nombre: "No está en la lista",
-      cargo: "No figura en trabajadores",
-      ok: false,
-      note: "Ese DNI no está en trabajadores. Use el ícono si es temporal.",
+  if (!worker && !state.wrkByDni.size) {
+    return Promise.race([
+      ensureWorkers(),
+      new Promise((resolve) => window.setTimeout(resolve, 1500)),
+    ]).then(() => {
+      if (opId !== state.scanOpId) return false;
+      return completeWorkerScan(findWorkerByDni(dni) || personFromSaved(dni), dni, opId);
+    }).catch(() => {
+      if (opId !== state.scanOpId) return false;
+      return completeWorkerScan(findWorkerByDni(dni) || personFromSaved(dni), dni, opId);
     });
-    speak("No está en la lista.", { flush: true });
-    return true;
   }
 
-  if (getMesa().some((p) => p.id === worker.dni)) {
-    const label = prepareSpeakName(worker) || twoApellidos(worker) || "";
-    showScanHit({
-      dni: worker.dni,
-      nombre: label,
-      cargo: [nameParts(worker).nombre, worker.cargo].filter(Boolean).join(" · "),
-      ok: false,
-      note: "Ya está en la lista. Intenta con otro trabajador.",
-    });
-    speak("Ya está en la lista. Intenta con otro trabajador.", { flush: true });
-    return true;
+  return completeWorkerScan(worker, dni, opId);
+  } catch {
+    return false;
   }
-
-  await registerPerson(worker);
-  if (opId !== state.scanOpId) return false;
-  showScanHit({
-    dni: worker.dni,
-    nombre: prepareSpeakName(worker) || twoApellidos(worker),
-    cargo: [nameParts(worker).nombre, worker.cargo].filter(Boolean).join(" · "),
-    ok: true,
-    note: "Registrado. Siguiente.",
-  });
-  return true;
 }
 
 async function sendLista() {
   if (state.busy) return;
+  state.busy = true;
+  try {
   const s = supervisor();
   if (!s) {
     speak("Vuelve a escanear tu DNI");
@@ -2400,11 +2523,10 @@ async function sendLista() {
     warnLocked();
     return;
   }
-  // Extra solo si ya hay almuerzo guardado de verdad. Primer envío (también Cualquiera) = lista normal.
   let extra = !!state.extraOn;
   if (extra && !hasSavedSend()) {
-    state.extraOn = false;
-    extra = false;
+    showAlert("Todavía no", "Primero envíe el almuerzo del turno. Después puede mandar extras, también sin señal.");
+    return;
   }
   const mesa = getMesa();
   if (!mesa.length) {
@@ -2432,7 +2554,6 @@ async function sendLista() {
       fundo: currentFundo(),
       comida,
       comedor: currentComedor(),
-      ...campoMeta(),
       send_id: sendId,
       personas: mesa.map((p) => ({
         id: p.id,
@@ -2454,8 +2575,8 @@ async function sendLista() {
   else show("home");
   const online = navigator.onLine;
   speak(extra
-    ? (online ? `Extra: ${n} ${mealWord(comida, n)} al ${currentComedor()}` : `Sin señal. Extra de ${n} quedó en cola.`)
-    : (online ? `Se pidió ${n} ${mealWord(comida, n)} al ${currentComedor()}` : `Sin señal. Quedó en cola. Al tener internet se sube solo.`));
+    ? (online ? `Extra: ${n} ${mealWord(comida, n)} al ${currentComedor()}` : `Sin señal. Extra guardado.`)
+    : (online ? `Se pidió ${n} ${mealWord(comida, n)} al ${currentComedor()}` : `Sin señal. Quedó guardado.`));
   saveAndSync(record).then(async (result) => {
     if (result.status === "enviado") {
       setMesa(getMesa().map((p) => ({ ...p, status: "enviado" })));
@@ -2507,7 +2628,12 @@ async function sendLista() {
         "Este supervisor ya mandó el almuerzo de hoy desde otro celular. Si falta alguien, pulse Extra."
       );
     }
+  }).catch(() => {
+    refreshPendPill();
   });
+  } finally {
+    state.busy = false;
+  }
 }
 
 async function saveCierre() {
@@ -2549,8 +2675,8 @@ async function doSync() {
   }
   const sum = await flushQueue();
   if (sum.sent && !sum.pending) speak("Todo enviado");
-  else if (sum.pending) speak(`Quedan ${sum.pending} por enviar`);
-  else speak("Nada pendiente");
+  else if (sum.pending) speak("Quedó guardado. Se envía al tener señal.");
+  else speak("Nada por enviar");
   show("sync");
 }
 
@@ -2595,7 +2721,7 @@ async function onClick(e) {
   }
   if (act === "dismiss-alert") {
     dismissAlert();
-    if (state.view === "supervisor") resumeCam();
+    if (state.view === "supervisor" || state.view === "home") resumeCam();
     return;
   }
   if (act === "start-cam") { unlockVoice(); startCamHere(); return; }
@@ -2723,7 +2849,7 @@ async function onClick(e) {
     for (const id of ids) {
       const worker = personFromSaved(id);
       if (!worker) continue;
-      const { already } = await registerPerson(worker);
+      const { already } = registerPerson(worker);
       if (!already) added += 1;
     }
     refreshMesaUi();
@@ -2738,12 +2864,11 @@ async function onClick(e) {
       showAlert("No encontrado", "Ese DNI no está guardado.");
       return;
     }
-    registerPerson(worker).then(({ already }) => {
-      refreshMesaUi();
-      showDniModal();
-      if (already) setScanLive("Ya está en el resumen.", true);
-      else setScanLive(`${twoApellidos(worker)} · en lista`, true);
-    });
+    const { already } = registerPerson(worker);
+    refreshMesaUi();
+    showDniModal();
+    if (already) setScanLive("Ya está en el resumen.", true);
+    else setScanLive(`${twoApellidos(worker)} · en lista`, true);
     return;
   }
   if (act === "go-perfil") { showPerfilModal(); return; }
@@ -2820,11 +2945,10 @@ async function onClick(e) {
       cargo: "Temporal",
       temporal: true,
     };
-    registerPerson(worker).then(({ already }) => {
-      dismissAlert();
-      refreshMesaUi();
-      setScanLive(already ? "Ya está en el resumen." : "Temporal. Guardado en este celular.", true);
-    });
+    const { already } = registerPerson(worker);
+    dismissAlert();
+    refreshMesaUi();
+    setScanLive(already ? "Ya está en el resumen." : "Temporal. Guardado en este celular.", true);
     return;
   }
   if (act === "ask-drop-mesa") {
@@ -2832,12 +2956,15 @@ async function onClick(e) {
     return;
   }
   if (act === "drop-mesa") {
-    const id = btn.dataset.id;
-    const who = getMesa().find((p) => p.id === id);
+    const id = normalizeDni(btn.dataset.id || "");
+    if (!id) return;
+    const who = getMesa().find((p) => normalizeDni(p.id) === id);
     removeMesaPerson(id);
     dismissAlert();
     refreshMesaUi();
+    unlockWorkerScan(id);
     speak(who ? `Quité a ${who.apellido || twoApellidos(who)}.` : "Quitado de la lista.");
+    setScanLive("Listo. Acerca el QR.", true);
     return;
   }
   if (act === "go-summary") {
@@ -2869,7 +2996,6 @@ async function onClick(e) {
     const lab = btn.dataset.label || btn.textContent.trim();
     if (pick === "sel-fundo" || pick === "sel-etapa") store.setPrefs({ fundo: id, etapa: id });
     if (pick === "sel-comedor") store.setPrefs({ comedor: id });
-    if (pick === "sel-campo-lote") store.setPrefs({ campoLote: id });
     const wrap = btn.closest(".pick");
     if (wrap) {
       wrap.dataset.value = id;
@@ -2988,7 +3114,8 @@ async function onClick(e) {
       showAlert("No está en la lista", "Ese DNI no está en trabajadores.");
       return;
     }
-    registerPerson(oficial).then(() => show("home"));
+    registerPerson(oficial);
+    show("home");
     return;
   }
   if (act === "pick-w") {
@@ -2997,7 +3124,8 @@ async function onClick(e) {
       showAlert("No está en la lista", "Solo supervisores de cosecha pueden pedir almuerzo.");
       return;
     }
-    registerPerson(w).then(() => show("home"));
+    registerPerson(w);
+    show("home");
   }
 }
 
@@ -3023,7 +3151,13 @@ async function boot() {
     const span = el.querySelector("span");
     if (span) span.textContent = phrase || "";
   });
-  document.getElementById("app").addEventListener("click", onClick);
+  document.getElementById("app").addEventListener("click", (e) => {
+    onClick(e).catch(() => {
+      state.handlingScan = false;
+      state.isProcessing = false;
+      scanner.setBusy(false);
+    });
+  });
   document.getElementById("app").addEventListener("input", (e) => {
     if (e.target.id === "pickQ") {
       state.pickQuery = e.target.value;
@@ -3041,7 +3175,7 @@ async function boot() {
     refreshPendPill();
     flushQueue().then((s) => {
       if (s?.duplicates) speak("Hoy ya envió. Solo extra.");
-      else if (s?.sent) speak(`Se enviaron ${s.sent} pendientes`);
+      else if (s?.sent) speak("Enviado");
       refreshPendPill();
       refreshHomeLock();
       if (supervisor()) syncTurnoDelDia().then(() => refreshHomeLock());
@@ -3058,8 +3192,9 @@ async function boot() {
     }
     if (document.visibilityState === "visible") {
       state.online = navigator.onLine;
-      if (scanner.active && (state.view === "home" || state.view === "supervisor") && !state.loggingIn && !state.isProcessing) {
+      if (scanner.active && (state.view === "home" || state.view === "supervisor") && !state.loggingIn) {
         scanner.resume();
+        scanner.setBusy(!!state.isProcessing);
       }
       store.restoreSesion().then(() => {
         if (state.view !== "welcome" && state.view !== "supervisor" && state.view !== "lock" && !supervisor()) {
@@ -3084,7 +3219,6 @@ async function boot() {
   const catalogs = Promise.all([
     loadJson("./data/config.json", {}),
     loadJson("./data/supervisors.json", { supervisores: [] }),
-    loadLotes(),
   ]);
 
   if ("serviceWorker" in navigator) {
@@ -3122,6 +3256,7 @@ async function boot() {
   state.workers = [];
   if (cfg.appsScriptUrl) store.setScriptUrl(cfg.appsScriptUrl);
   dropScanCola();
+  ensureWorkers();
 
   await store.restoreSesion();
   const hash = viewFromHash();
@@ -3132,14 +3267,15 @@ async function boot() {
     store.setSesion(supervisor());
     const next = hash && hash !== "welcome" && hash !== "lock" && hash !== "supervisor" ? hash : "home";
     show(next, { replace: true });
-    if (state.online) {
-      syncTurnoDelDia({ timeoutMs: 2200 }).then(() => refreshHomeLock());
-      flushQueue().then(() => refreshPendPill());
-    }
+    syncTurnoDelDia({ timeoutMs: 2200 }).then(() => refreshHomeLock());
   } else {
     show(hash === "supervisor" ? "supervisor" : "welcome", { replace: true });
     if (state.view === "welcome" && !wasUpdating) speak("Bienvenido a Cocina Q Berries");
   }
+  startAutoSync(() => {
+    refreshPendPill();
+    refreshHomeLock();
+  });
   if (wasUpdating) hideUpdatingVeil();
 }
 

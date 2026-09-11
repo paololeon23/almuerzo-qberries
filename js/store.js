@@ -56,6 +56,8 @@ function slimSesion(s) {
 
 const IDB_NAME = "cocina-qb";
 const IDB_STORE = "sesion";
+const IDB_KV = "kv";
+const IDB_VER = 2;
 
 function openIdb() {
   return new Promise((resolve, reject) => {
@@ -63,15 +65,86 @@ function openIdb() {
       reject(new Error("no_idb"));
       return;
     }
-    const req = indexedDB.open(IDB_NAME, 1);
+    const req = indexedDB.open(IDB_NAME, IDB_VER);
     req.onupgradeneeded = () => {
-      if (!req.result.objectStoreNames.contains(IDB_STORE)) {
-        req.result.createObjectStore(IDB_STORE);
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+      if (!db.objectStoreNames.contains(IDB_KV)) {
+        db.createObjectStore(IDB_KV);
       }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
+}
+
+let kvWriteChain = Promise.resolve();
+
+function idbPutKv(key, value) {
+  const run = async () => {
+    let db;
+    try {
+      db = await openIdb();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_KV, "readwrite");
+        tx.objectStore(IDB_KV).put(value, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch {
+      /* localStorage sigue */
+    } finally {
+      try { db?.close(); } catch { /* ignore */ }
+    }
+  };
+  kvWriteChain = kvWriteChain.then(run, run);
+  return kvWriteChain;
+}
+
+async function idbGetKv(key) {
+  let db;
+  try {
+    db = await openIdb();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_KV, "readonly");
+      const req = tx.objectStore(IDB_KV).get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    return undefined;
+  } finally {
+    try { db?.close(); } catch { /* ignore */ }
+  }
+}
+
+function persistList(key, list) {
+  const ok = write(key, list);
+  idbPutKv(key, list);
+  return ok;
+}
+
+function lsKeyExists(key) {
+  try {
+    return localStorage.getItem(key) !== null;
+  } catch {
+    return true;
+  }
+}
+
+async function hydrateKv() {
+  try {
+    const keys = [STORAGE_KEYS.cola, STORAGE_KEYS.mesa, STORAGE_KEYS.historial];
+    for (const key of keys) {
+      if (lsKeyExists(key)) continue;
+      const fromIdb = await idbGetKv(key);
+      if (Array.isArray(fromIdb) && fromIdb.length) write(key, fromIdb);
+    }
+  } catch {
+    /* sigue con localStorage */
+  }
 }
 
 async function idbPutDni(dni) {
@@ -134,11 +207,11 @@ export const store = {
   upsertCola(record) {
     const cola = this.getCola().filter((r) => r.clientId !== record.clientId);
     cola.unshift(record);
-    write(STORAGE_KEYS.cola, cola);
+    persistList(STORAGE_KEYS.cola, cola);
     return cola;
   },
   removeCola(clientId) {
-    write(STORAGE_KEYS.cola, this.getCola().filter((r) => r.clientId !== clientId));
+    persistList(STORAGE_KEYS.cola, this.getCola().filter((r) => r.clientId !== clientId));
   },
   getHistorial() {
     this.pruneHistorial();
@@ -147,7 +220,7 @@ export const store = {
   pushHistorial(record) {
     const list = this.getHistorial().filter((r) => r.clientId !== record.clientId);
     list.unshift({ ...record, savedAt: Date.now() });
-    write(STORAGE_KEYS.historial, list);
+    persistList(STORAGE_KEYS.historial, list);
   },
   pruneHistorial() {
     const list = read(STORAGE_KEYS.historial, []).filter((r) => Date.now() - (r.savedAt || 0) < HISTORY_TTL_MS);
@@ -193,6 +266,7 @@ export const store = {
     return ok;
   },
   async restoreSesion() {
+    await hydrateKv();
     const local = read(STORAGE_KEYS.sesion, null);
     let dni = normalizeDni(local?.dni || local?.id);
     if (!isSesionDni(dni)) dni = await idbGetDni();
@@ -305,10 +379,10 @@ export const store = {
   },
   setMesa(list) {
     const day = todayKey(TZ);
-    write(STORAGE_KEYS.mesa, (list || []).map((p) => ({ ...p, fecha: p.fecha || day })));
+    persistList(STORAGE_KEYS.mesa, (list || []).map((p) => ({ ...p, fecha: p.fecha || day })));
   },
   clearMesa() {
-    write(STORAGE_KEYS.mesa, []);
+    persistList(STORAGE_KEYS.mesa, []);
   },
   getScriptUrl() {
     return (this.getPrefs().scriptUrl || localStorage.getItem(STORAGE_KEYS.scriptUrl) || "").trim();

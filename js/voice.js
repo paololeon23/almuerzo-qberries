@@ -116,6 +116,8 @@ function voiceScore(v) {
   const blob = `${v.name} ${v.voiceURI}`;
   if (MALE.test(blob)) return -40;
   let n = 20;
+  if (v.localService === true) n += 32;
+  if (v.localService === false) n -= 6;
   if (FEMALE.test(blob)) n += 60;
   if (/paulina/i.test(blob)) n += 24;
   if (/m[oó]nica|monica/i.test(blob)) n += 18;
@@ -137,9 +139,13 @@ function pickVoice() {
     .filter((x) => x.s > 0)
     .sort((a, b) => b.s - a.s);
   cachedVoice = ranked[0]?.v
+    || voices.find((v) => v.localService !== false && /^es/i.test(v.lang) && FEMALE.test(`${v.name} ${v.voiceURI}`))
+    || voices.find((v) => v.localService !== false && /^es/i.test(v.lang) && !MALE.test(`${v.name} ${v.voiceURI}`))
+    || voices.find((v) => v.localService !== false && /^es/i.test(v.lang))
     || voices.find((v) => /^es/i.test(v.lang) && FEMALE.test(`${v.name} ${v.voiceURI}`))
     || voices.find((v) => /^es/i.test(v.lang) && !MALE.test(`${v.name} ${v.voiceURI}`))
     || voices.find((v) => /^es/i.test(v.lang))
+    || voices.find((v) => v.localService !== false)
     || null;
   return cachedVoice;
 }
@@ -206,32 +212,52 @@ function hardFlush() {
 }
 
 export function speak(text, opts = {}) {
-  if (!voiceEnabled()) return;
-  const phrase = prepareSpeakText(text, { nameOnly: false });
-  if (!phrase) return;
-  unlockVoice();
-  const s = synth();
-  if (opts.flush) {
-    hardFlush();
+  try {
+    if (!voiceEnabled()) return;
+    const phrase = prepareSpeakText(text, { nameOnly: false });
+    if (!phrase) return;
+    unlockVoice();
+    const s = synth();
+    if (!s) return;
+    if (opts.flush) {
+      hardFlush();
+      queue.push(phrase);
+      const gen = speakGen;
+      const delay = isAppleTouch() ? 90 : 40;
+      window.setTimeout(() => {
+        if (gen !== speakGen) return;
+        playNext();
+      }, delay);
+      return;
+    }
+    if (queue.length) queue.length = 0;
     queue.push(phrase);
-    const gen = speakGen;
-    const delay = isAppleTouch() ? 90 : 40;
-    window.setTimeout(() => {
-      if (gen !== speakGen) return;
-      playNext();
-    }, delay);
-    return;
+    playNext();
+  } catch {
+    playing = false;
+    speaking = false;
+    currentUtter = null;
   }
-  if (queue.length >= 4) queue.splice(0, queue.length - 3);
-  queue.push(phrase);
-  playNext();
 }
 
-/** Dice únicamente el nombre limpio (sin DNI, JSON ni símbolos). Reemplaza la cola. */
+/** Dice el nombre sin bloquear el escáner. Si ya habla, deja solo el último pendiente. */
 export function speakPersonName(personOrText) {
   const name = prepareSpeakName(personOrText);
   if (!name) return;
-  speak(name, { flush: true });
+  try {
+    if (!voiceEnabled()) return;
+    unlockVoice();
+    if (!synth()) return;
+    if (playing || speaking) {
+      queue.length = 0;
+      queue.push(name);
+      return;
+    }
+    speak(name);
+  } catch {
+    playing = false;
+    speaking = false;
+  }
 }
 
 export function speakApellido(apellido) {

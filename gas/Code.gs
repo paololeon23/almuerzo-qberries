@@ -39,7 +39,7 @@
 
 var CACHE_TTL_SEC = 21600;
 var ADMIN_CACHE_SEC = 4;
-var APP_VERSION = "1.4.3";
+var APP_VERSION = "1.4.4";
 var TZ = "America/Lima";
 
 var FUNDOS = ["LICAPA I", "LICAPA II", "LICAPA III"];
@@ -177,6 +177,47 @@ function doPost(e) {
   return jsonOut({ ok: false, error: "peticion_desconocida" });
 }
 
+function clientIdSeen(clientId) {
+  if (!clientId) return false;
+  try {
+    if (CacheService.getScriptCache().get("id:" + clientId)) return true;
+  } catch (e) { /* ignore */ }
+  try {
+    if (PropertiesService.getScriptProperties().getProperty("cid." + clientId)) return true;
+  } catch (e2) { /* ignore */ }
+  return false;
+}
+
+function clientIdMark(clientId) {
+  if (!clientId) return;
+  try {
+    CacheService.getScriptCache().put("id:" + clientId, "1", CACHE_TTL_SEC);
+  } catch (e) { /* ignore */ }
+  try {
+    PropertiesService.getScriptProperties().setProperty("cid." + clientId, "1");
+  } catch (e2) {
+    pruneClientIdProps();
+    try {
+      PropertiesService.getScriptProperties().setProperty("cid." + clientId, "1");
+    } catch (e3) { /* cupo lleno: la hoja sigue cubriendo listas */ }
+  }
+}
+
+function pruneClientIdProps() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var all = props.getProperties();
+    var keys = [];
+    for (var k in all) {
+      if (String(k).indexOf("cid.") === 0) keys.push(k);
+    }
+    if (keys.length < 180) return;
+    keys.sort();
+    var drop = keys.slice(0, keys.length - 120);
+    for (var i = 0; i < drop.length; i++) props.deleteProperty(drop[i]);
+  } catch (e) { /* ignore */ }
+}
+
 function isWorkerPayload(body) {
   if (!body || typeof body !== "object") return false;
   if (body.payload && typeof body.payload === "object") return true;
@@ -191,8 +232,7 @@ function workerSave(body) {
   }
   try {
     var clientId = String(body.clientId || "").trim();
-    var cache = CacheService.getScriptCache();
-    if (clientId && cache.get("id:" + clientId)) {
+    if (clientIdSeen(clientId)) {
       return jsonOut({ ok: true, saved: true, duplicate: true });
     }
 
@@ -226,7 +266,7 @@ function workerSave(body) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
     if (type === "cierre") {
-      if (clientId) cache.put("id:" + clientId, "1", CACHE_TTL_SEC);
+      clientIdMark(clientId);
       return jsonOut({ ok: true, saved: true, cierre: true, duplicate: false });
     }
 
@@ -251,7 +291,7 @@ function workerSave(body) {
 
     if (!extra && yaEnvio) {
       markSupervisorSent(sid, fecha, comida);
-      if (clientId) cache.put("id:" + clientId, "1", CACHE_TTL_SEC);
+      clientIdMark(clientId);
       return jsonOut({
         ok: true,
         saved: true,
@@ -281,7 +321,7 @@ function workerSave(body) {
           status: "confirmed"
         });
       }
-      if (clientId) cache.put("id:" + clientId, "1", CACHE_TTL_SEC);
+      clientIdMark(clientId);
       var totalX = refreshSupervisorTotal(ss, sid, fecha, people.length);
       bumpAdminCache();
       return jsonOut({
@@ -326,7 +366,7 @@ function workerSave(body) {
       total: n
     });
     markSupervisorSent(sid, fecha, comida);
-    if (clientId) cache.put("id:" + clientId, "1", CACHE_TTL_SEC);
+    clientIdMark(clientId);
     var totalL = refreshSupervisorTotal(ss, sid, fecha, 0);
     bumpAdminCache();
     return jsonOut({
