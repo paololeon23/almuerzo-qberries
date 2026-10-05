@@ -115,6 +115,7 @@ const state = {
   admin: false,
   logoTaps: 0,
   mesaPage: 1,
+  mesaQuery: "",
   dniPage: 1,
   dniQuery: "",
   dniSelected: {},
@@ -146,18 +147,34 @@ function freshFetch() {
   }
 }
 
+async function readCachedJson(path) {
+  if (!("caches" in window)) return null;
+  try {
+    const hit = await caches.match(path, { ignoreSearch: true });
+    if (!hit) return null;
+    return await hit.json();
+  } catch {
+    return null;
+  }
+}
+
 async function loadJson(path, fallback) {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    const cached = await readCachedJson(path);
+    if (cached != null) return cached;
+  }
   const ctrl = new AbortController();
   const timer = window.setTimeout(() => ctrl.abort(), 8000);
   try {
     const res = await fetch(path, { cache: freshFetch(), signal: ctrl.signal });
-    if (!res.ok) return fallback;
-    return await res.json();
+    if (res.ok) return await res.json();
   } catch {
-    return fallback;
+    /* sigue con la copia guardada */
   } finally {
     window.clearTimeout(timer);
   }
+  const cached = await readCachedJson(path);
+  return cached != null ? cached : fallback;
 }
 
 function nameParts(person) {
@@ -174,6 +191,18 @@ function nameParts(person) {
 
 function twoApellidos(person) {
   return nameParts(person).apellido;
+}
+
+function displayName(person) {
+  if (!person) return "";
+  const full = String(
+    person.nombreCompleto
+    || [person.apellido, person.nombre].filter(Boolean).join(" ")
+    || person.apellido
+    || person.nombre
+    || ""
+  ).replace(/\s+/g, " ").trim();
+  return full;
 }
 
 function supervisorNombreCompleto(s) {
@@ -278,9 +307,9 @@ function findSupervisor(parsed) {
 function supervisor() {
   const dni = store.getSesionDni();
   if (!dni) return null;
-  const hit = state.supByDni.get(dni);
-  if (hit) return { ...hit, apellido: twoApellidos(hit) };
   const ses = store.getSesion();
+  const hit = state.supByDni.get(dni);
+  if (hit) return { ...hit, apellido: twoApellidos(hit), emergencia: !!(ses?.emergencia || hit.emergencia) };
   if (ses?.emergencia) {
     return {
       id: dni,
@@ -424,6 +453,7 @@ async function syncTurnoDelDia({ timeoutMs = 2800 } = {}) {
   const s = supervisor();
   const sid = normalizeDni(s?.dni || s?.id);
   if (!sid) return store.getTurnoDia();
+  if (s?.emergencia) return store.getTurnoDia();
   const run = (async () => {
     if (!navigator.onLine) return store.getTurnoDia();
     const r = await checkTurno({
@@ -451,6 +481,7 @@ async function syncTurnoDelDia({ timeoutMs = 2800 } = {}) {
 
 function refreshHomeLock() {
   if (state.view !== "home") return;
+  if (alertIsOpen()) return;
   const shell = document.querySelector("#app .shell");
   const cam = document.getElementById("cam");
   if (!shell || !cam) {
@@ -1036,14 +1067,30 @@ function loteCard() {
   </section>`;
 }
 
-function comedores() {
-  return [
-    ...Array.from({ length: 11 }, (_, i) => `Comedor ${i + 1}`),
-    "Garita 1",
-    "Garita 2",
+const COMEDORES_POR_FUNDO = {
+  "LICAPA I": [
+    "Comedor 1",
+    "Comedor 2",
+    "Comedor 3",
+    "Comedor 4",
+    "Comedor 5",
     "Galpon",
+    "Oficina Tecnica",
     "Comedor Administrativo",
-  ];
+  ],
+  "LICAPA II": [
+    "Comedor 6",
+    "Comedor 7",
+    "Comedor 8",
+    "Comedor 9",
+    "Comedor 10",
+    "Comedor Principal - II",
+  ],
+  "LICAPA III": ["Comedor 11"],
+};
+
+function comedores(fundo = currentFundo()) {
+  return COMEDORES_POR_FUNDO[fundo] || COMEDORES_POR_FUNDO["LICAPA I"];
 }
 
 function fundos() {
@@ -1121,6 +1168,12 @@ function filterPick(wrap, query) {
 }
 
 function onPickInput(e) {
+  if (e.target.id === "dni-login") {
+    const clean = String(e.target.value || "").replace(/\D/g, "").slice(0, 8);
+    if (e.target.value !== clean) e.target.value = clean;
+    if (clean.length === 8) document.getElementById("fDniLogin")?.classList.remove("bad");
+    return;
+  }
   if (e.target.id === "dni-search") {
     state.dniQuery = e.target.value;
     state.dniPage = 1;
@@ -1147,6 +1200,11 @@ function onPickInput(e) {
 
 function onPickKey(e) {
   if (e.key === "Escape") closePicks();
+  if (e.key === "Enter" && e.target.id === "dni-login") {
+    e.preventDefault();
+    e.target.closest(".modal")?.querySelector('[data-act="submit-dni-login"]')?.click();
+    return;
+  }
   if (e.key === "Enter" && e.target.classList.contains("pick-search")) {
     e.target.closest(".pick")?.querySelector(".pick-opt:not([hidden])")?.click();
   }
@@ -1205,7 +1263,7 @@ function showSummaryModal() {
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
       <div class="summary-top">
-        ${sectionHead("Solicitud de almuerzo", state.extraOn ? "Entra como extra (se olvidó o llegó tarde). Va a Comidas extras." : "Confirme fundo y comedor antes de enviar.")}
+        ${sectionHead("Solicitud de almuerzo", state.extraOn ? "Entra como extra (se olvidó o llegó tarde). Va a Comidas extras." : "Almuerzo normal. Confirme fundo y comedor antes de enviar.")}
       </div>
       <div class="summary-stat">
         <b>${n}</b>
@@ -1224,7 +1282,7 @@ function showSummaryModal() {
       </div>
       <div class="footer-actions">
         <button class="btn ghost" data-act="dismiss-alert" type="button">Cerrar</button>
-        <button class="btn leaf" data-act="send-lista" type="button"${n ? "" : " disabled"}>${state.extraOn ? "Enviar extra" : "Enviar"}</button>
+        <button class="btn leaf" data-act="send-lista" type="button"${n ? "" : " disabled"}>${state.extraOn ? "Enviar extra" : "Enviar normal"}</button>
       </div>
     </div>
   </div>`);
@@ -1347,15 +1405,37 @@ function camActions() {
 
 function scanBox() {
   return `<div class="scan-wrap">
-    <div class="scan-box">
-      <video id="cam" playsinline muted></video>
-      <div class="finder-sq"></div>
+    <div class="scan-row">
+      <div class="scan-box">
+        <video id="cam" autoplay playsinline muted></video>
+        <div class="finder-sq"></div>
+      </div>
     </div>
     ${camActions()}
   </div>`;
 }
 
-function startCamHere() {
+function dniHeadBtn() {
+  const emerg = !!state.emergencyPending;
+  return `<button class="scan-dni-btn${emerg ? " on" : ""}" data-act="open-dni-login" type="button" aria-label="${emerg ? "Entrar con DNI de cualquiera" : "Entrar con DNI de supervisor"}">${userIcon()}</button>`;
+}
+
+function framesReady(video, ms) {
+  if (!video) return Promise.resolve(false);
+  if (video.videoWidth > 0) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const t0 = performance.now();
+    const tick = () => {
+      if (!video.isConnected) { resolve(false); return; }
+      if (video.videoWidth > 0) { resolve(true); return; }
+      if (performance.now() - t0 >= ms) { resolve(false); return; }
+      window.requestAnimationFrame(tick);
+    };
+    tick();
+  });
+}
+
+function startCamHere(fromTap = false) {
   const video = document.getElementById("cam");
   if (!video) return;
   if (state.scanMode === "wrk" && isSendLocked()) {
@@ -1363,7 +1443,7 @@ function startCamHere() {
     setScanLive("Ya envió. Pulse Extra si alguien se olvidó o llegó tarde.", false);
     return;
   }
-  if (scanner.isLiveOn(video)) {
+  if (!fromTap && scanner.isLiveOn(video) && video.videoWidth > 0) {
     scanner.bindHandlers(onScan, onScanBusy);
     scanner.setBusy(!!state.isProcessing);
     scanner.resume();
@@ -1371,14 +1451,21 @@ function startCamHere() {
     return;
   }
   setScanLive("Abriendo cámara…");
-  scanner.start(video, onScan, onScanBusy).then((ok) => {
+  scanner.start(video, onScan, onScanBusy, { gesture: fromTap }).then(async (ok) => {
     if (ok === false) return;
+    const cam = document.getElementById("cam");
+    const ready = await framesReady(cam, 1600);
+    if (!ready) {
+      setScanLive("Toca Activar cámara QR y permite el acceso.", false);
+      if (fromTap) speak("Toca Activar cámara QR y permite el acceso.", { flush: true });
+      return;
+    }
     scanner.setBusy(!!state.isProcessing);
     scanner.resume();
     setScanLive(state.isProcessing ? "Procesando…" : "Cámara lista. Acerca el QR al recuadro.");
   }).catch(() => {
     setScanLive("Toca Activar cámara QR y permite el acceso.", false);
-    speak("Toca Activar cámara QR y permite el acceso.", { flush: true });
+    if (fromTap) speak("Toca Activar cámara QR y permite el acceso.", { flush: true });
   });
 }
 
@@ -1510,7 +1597,7 @@ function askDropMesa(id, name) {
   const dni = normalizeDni(id);
   if (!dni) return;
   const who = getMesa().find((p) => normalizeDni(p.id) === dni);
-  const label = String(name || who?.apellido || twoApellidos(who) || dni).trim();
+  const label = String(displayName(who) || name || dni).trim();
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
     <div class="modal" role="dialog" aria-modal="true" data-act="stay">
       <h3>¿Quitar de la lista?</h3>
@@ -1577,7 +1664,8 @@ function offerSupervisorOwnLunch(person) {
 }
 
 function showSupervisorLunchModal(worker) {
-  const label = prepareSpeakName(worker) || twoApellidos(worker) || worker.dni;
+  const label = displayName(worker) || worker.dni;
+  scanner.pause();
   openAlert(`<div class="modal-back" data-act="stay">
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
       ${sectionHead("Almuerzo del supervisor", "Ya tenemos un almuerzo cargado por el supervisor. Así no escanea dos veces. Si desea, puede eliminarlo.")}
@@ -1595,8 +1683,8 @@ function scanHelp() {
   return `<aside class="scan-help">
     <p class="scan-help-title">Qué hacer</p>
     <ol>
-      <li>Verde: solo supervisores. Escanee su QR.</li>
-      <li>Rojo: cualquier persona, por emergencia.</li>
+      <li>Verde: solo supervisores. Escanee su QR o escriba el DNI.</li>
+      <li>Rojo: cualquier persona, por emergencia. También puede escribir el DNI.</li>
       <li>Si entra en rojo, usted pide la comida. Tenga cuidado.</li>
     </ol>
   </aside>`;
@@ -1605,7 +1693,7 @@ function scanHelp() {
 function showEmergencyWarn() {
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
-      ${sectionHead("Cualquier persona", "El botón rojo deja entrar a cualquiera. Serás responsable de solicitar la comida. Escanea tu QR. Después podrás elegir fundo y comedor.")}
+      ${sectionHead("Cualquier persona", "El botón rojo deja entrar a cualquiera. Serás responsable de solicitar la comida. Escanea tu QR o escribe el DNI. Después podrás elegir fundo y comedor.")}
       <p class="extra-note">Ten cuidado, por favor. Esto es solo por emergencia.</p>
       <div class="footer-actions solo" style="margin-top:8px">
         <button class="btn leaf" data-act="confirm-emergency" type="button">Entendido</button>
@@ -1617,6 +1705,8 @@ function showEmergencyWarn() {
 function setEmergencyUi(on) {
   document.querySelector(".emerg-fab")?.classList.toggle("on", on);
   document.querySelector(".scan-panel")?.classList.toggle("is-emerg", on);
+  document.querySelector(".scan-dni-btn")?.classList.toggle("on", on);
+  document.querySelector(".scan-dni-btn")?.setAttribute("aria-label", on ? "Entrar con DNI de cualquiera" : "Entrar con DNI de supervisor");
   const tag = document.getElementById("access-tag");
   if (tag) {
     tag.className = `access-tag ${on ? "red" : "green"}`;
@@ -1624,13 +1714,11 @@ function setEmergencyUi(on) {
   }
   const sub = document.querySelector(".scan-panel .scan-head .section-head p");
   if (sub) {
-    sub.textContent = on
-      ? "Rojo activo. Escanea tu QR. Puede entrar cualquiera."
-      : "Verde: solo supervisores autorizados. Escanee su QR.";
+    sub.textContent = "Escanea tu QR o escribe el DNI.";
   }
   const bar = document.querySelector(".appbar-titles p");
   if (bar) bar.textContent = on ? "Rojo · cualquier persona" : "Verde · solo supervisores";
-  setScanLive(on ? "Escanea tu QR. Cualquier persona puede entrar." : "Listo para escanear el QR de supervisor.", true);
+  setScanLive(on ? "Escanea tu QR o escribe el DNI. Cualquier persona puede entrar." : "Listo para escanear el QR o escribir el DNI.", true);
 }
 
 function toggleEmergencySup() {
@@ -1664,8 +1752,7 @@ function enterEmergencySupervisor(person) {
   }
   const official = findSupervisor({ dni });
   if (official) {
-    state.emergencyPending = false;
-    showLoginGate(official);
+    showLoginGate({ ...official, emergencia: true });
     return;
   }
   // No está en supervisores: siempre pedir nombre antes de entrar
@@ -1681,7 +1768,7 @@ function showEmergencyNameModal(dni, prefill = "") {
   scanner.pause();
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
-      ${sectionHead("Cualquiera", "No está en supervisores. Escriba su nombre completo antes de entrar. El primer envío es almuerzo normal; Extra solo después de cerrar almuerzo.")}
+      ${sectionHead("Cualquiera", "No está en supervisores. Escriba su nombre completo. Este pedido sale como almuerzo normal.")}
       <p class="extra-note">DNI ${esc(dni)}</p>
       <div class="field" id="fEmergNom">
         <label>Apellidos y nombres</label>
@@ -1699,6 +1786,84 @@ function showEmergencyNameModal(dni, prefill = "") {
     el?.select?.();
   }, 50);
   speak("Escriba su nombre para entrar.", { flush: true });
+}
+
+function showDniLoginModal(cualquiera) {
+  if (state.loggingIn) return;
+  scanner.pause();
+  const title = cualquiera ? "DNI de cualquiera" : "DNI de supervisor";
+  const sub = cualquiera
+    ? "Escriba los 8 dígitos. Si no está en supervisores, pediremos el nombre. Este pedido sale como almuerzo normal."
+    : "Escriba los 8 dígitos. Solo entra quien está en la lista de supervisores.";
+  openAlert(`<div class="modal-back" data-act="dismiss-alert">
+    <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
+      ${sectionHead(title, sub)}
+      ${cualquiera ? `<p class="extra-note">Cualquier persona. Tenga cuidado: usted pide la comida.</p>` : ""}
+      <div class="field" id="fDniLogin">
+        <label>DNI</label>
+        <input id="dni-login" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="8 dígitos" enterkeyhint="go">
+        <span class="hint" id="dni-login-hint">El DNI tiene 8 números.</span>
+      </div>
+      <div class="footer-actions" style="margin-top:8px">
+        <button class="btn ghost" data-act="dismiss-alert" type="button">Cancelar</button>
+        <button class="btn leaf" data-act="submit-dni-login" data-cualquiera="${cualquiera ? "1" : "0"}" type="button">Entrar</button>
+      </div>
+    </div>
+  </div>`);
+  window.setTimeout(() => document.getElementById("dni-login")?.focus(), 50);
+  speak(cualquiera ? "Escriba el DNI de la persona." : "Escriba su DNI.", { flush: true });
+}
+
+function rejectTypedDni(message) {
+  const field = document.getElementById("fDniLogin");
+  const hint = document.getElementById("dni-login-hint");
+  field?.classList.add("bad");
+  if (hint) hint.textContent = message;
+  speak(message, { flush: true });
+  document.getElementById("dni-login")?.focus();
+}
+
+function continueTypedEmergency(dni) {
+  const go = () => {
+    if (state.loggingIn) return;
+    const hit = findSupervisor({ dni });
+    if (hit) {
+      showLoginGate({ ...hit, emergencia: true });
+      return;
+    }
+    enterEmergencySupervisor(findWorkerByDni(dni) || { dni, id: dni });
+  };
+  dismissAlert();
+  if (findWorkerByDni(dni) || state.wrkByDni.size) {
+    go();
+    return;
+  }
+  Promise.race([
+    ensureWorkers(),
+    new Promise((resolve) => window.setTimeout(resolve, 1500)),
+  ]).then(go).catch(go);
+}
+
+function submitTypedDni(cualquiera) {
+  if (state.loggingIn) return;
+  const dni = String(document.getElementById("dni-login")?.value || "").replace(/\D/g, "");
+  if (!/^\d{8}$/.test(dni)) {
+    rejectTypedDni("El DNI tiene 8 números.");
+    return;
+  }
+  if (!cualquiera) {
+    const hit = findSupervisor({ dni });
+    if (!hit) {
+      rejectTypedDni("No autorizado. Ese DNI no está en supervisores.");
+      return;
+    }
+    dismissAlert();
+    showLoginGate(hit);
+    return;
+  }
+  state.emergencyPending = true;
+  setEmergencyUi(true);
+  continueTypedEmergency(dni);
 }
 
 function finishEmergencyLogin(dni, nombreCompleto) {
@@ -1728,37 +1893,62 @@ function supervisorView() {
     <div class="scan-fit">
       <section class="section-card scan-panel${emerg ? " is-emerg" : ""}">
         <div class="scan-head">
-          ${sectionHead("Permiso", emerg ? "Rojo activo. Escanea tu QR. Puede entrar cualquiera." : "Verde: solo supervisores autorizados. Escanee su QR.")}
+          ${sectionHead("Permiso", "Escanea tu QR o escribe el DNI.")}
+          ${dniHeadBtn()}
         </div>
-        ${!navigator.onLine ? `<p class="extra-note">Se necesita señal para iniciar sesión. Así se sabe si este supervisor ya envió hoy.</p>` : ""}
+        ${!navigator.onLine ? `<p class="extra-note">Sin señal. Puede escanear y enviar.</p>` : ""}
         <p class="access-tag ${emerg ? "red" : "green"}" id="access-tag">${emerg ? "Cualquier persona" : "Solo supervisores"}</p>
         ${scanBox()}
-        <p class="scan-live" id="scan-live">${emerg ? "Escanea tu QR. Cualquier persona puede entrar." : "Toca Activar cámara QR."}</p>
+        <p class="scan-live" id="scan-live">${emerg ? "Escanea tu QR o escribe el DNI. Cualquier persona puede entrar." : "Toca Activar cámara QR o escriba su DNI."}</p>
         ${scanHitBox()}
         ${scanHelp()}
       </section>
     </div>
-    <button class="emerg-fab${emerg ? " on" : ""}" data-act="add-emergency-sup" type="button" aria-label="Entrar como cualquier persona">${userIcon()}<b>Cualquiera</b></button>
+    <div class="emerg-dock">
+      <button class="emerg-fab${emerg ? " on" : ""}" data-act="add-emergency-sup" type="button" aria-label="Entrar como usuario">${userIcon()}<b>Usuario</b></button>
+    </div>
   </div>`);
   startCamHere();
 }
 
+function mesaFindDigits() {
+  return String(state.mesaQuery || "").replace(/\D/g, "").slice(0, 8);
+}
+
+function mesaForList(mesa) {
+  const q = mesaFindDigits();
+  if (!q) return mesa;
+  return mesa.filter((p) => String(p.id || "").replace(/\D/g, "").includes(q));
+}
+
+function mesaFindBox() {
+  const q = mesaFindDigits();
+  return `<label class="mesa-find">
+    <input id="mesa-q" class="dni-search" type="search" inputmode="numeric" maxlength="8" enterkeyhint="search" autocomplete="off" placeholder="Buscar DNI" value="${esc(q)}" aria-label="Buscar por DNI">
+  </label>`;
+}
+
 function mesaRows(mesa) {
+  const q = mesaFindDigits();
+  const shown = mesaForList(mesa);
   if (!mesa.length) {
     return `<div class="empty-mesa">${forkIcon()}<p>Aún nadie. Escanea al primero.</p></div>`;
   }
-  const { rows } = pageSlice(mesa);
+  if (!shown.length) {
+    return `<div class="empty-mesa"><p>Ningún DNI coincide.</p></div>`;
+  }
+  const { rows } = pageSlice(shown);
   return rows.map((p) => {
     const st = p.status === "enviado" ? "Listo" : p.status === "pendiente" ? "Guardado" : "En lista";
     const kind = p.status === "enviado" ? "ok" : p.status === "pendiente" ? "wait" : "now";
     return `<div class="person-row">
       ${forkIcon()}
       <div>
-        <b>${esc(p.apellido || twoApellidos(p))}</b>
-        <div class="meta">DNI ${esc(p.id)} · ${esc(p.nombre || "")}${p.temporal ? " · Temporal" : ""}</div>
+        <b>${esc(displayName(p) || p.id)}</b>
+        <div class="meta">DNI ${esc(p.id)}${p.temporal ? " · Temporal" : ""}</div>
       </div>
       <span class="st ${kind}">${st}</span>
-      <button class="row-del" data-act="ask-drop-mesa" data-id="${esc(p.id)}" data-name="${esc(p.apellido || twoApellidos(p))}" type="button" aria-label="Quitar"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M6.2 5.1 5.1 6.2 10.9 12l-5.8 5.8 1.1 1.1L12 13.1l5.8 5.8 1.1-1.1L13.1 12l5.8-5.8-1.1-1.1L12 10.9 6.2 5.1z"/></svg></button>
+      <button class="row-del" data-act="ask-drop-mesa" data-id="${esc(p.id)}" data-name="${esc(displayName(p))}" type="button" aria-label="Quitar ${esc(displayName(p) || p.id)}"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M6.2 5.1 5.1 6.2 10.9 12l-5.8 5.8 1.1 1.1L12 13.1l5.8 5.8 1.1-1.1L13.1 12l5.8-5.8-1.1-1.1L12 10.9 6.2 5.1z"/></svg></button>
     </div>`;
   }).join("");
 }
@@ -1782,7 +1972,7 @@ function mesaCountCard(n) {
 
 function refreshMesaUi() {
   const mesa = getMesa();
-  const slice = pageSlice(mesa);
+  const slice = pageSlice(mesaForList(mesa));
   const list = document.getElementById("mesa-list");
   const count = document.getElementById("mesa-note");
   const num = document.getElementById("mesa-num");
@@ -1821,18 +2011,70 @@ function abortLogin(title, text) {
   else startCamHere();
 }
 
+function localAlreadySent(dni, comida = currentLote()) {
+  const sid = normalizeDni(dni);
+  const day = todayKey(TZ);
+  if (!sid) return false;
+  const turno = store.getTurnoDia();
+  if (
+    turno?.enviado
+    && turno.fecha === day
+    && (!turno.comida || turno.comida === comida)
+    && normalizeDni(turno.dni) === sid
+  ) return true;
+  const same = (r) => {
+    const p = r?.payload || {};
+    return r?.type === "lista"
+      && !p.extra
+      && p.fecha_local === day
+      && (!comida || p.comida === comida)
+      && normalizeDni(p.supervisor_id) === sid;
+  };
+  return store.getHistorial().some((r) => r.confirmed !== false && same(r))
+    || store.getCola().some(same);
+}
+
+function enterSession(person, { enviado = false, fecha, comida } = {}) {
+  const dni = normalizeDni(person?.dni || person?.id);
+  if (!store.setSesion(person)) {
+    abortLogin("No se pudo entrar", "Intente de nuevo el QR.");
+    return;
+  }
+  state.extraOn = false;
+  state.mesaQuery = "";
+  state.mesaPage = 1;
+  store.setTurnoDia({
+    dni,
+    fecha: fecha || todayKey(TZ),
+    comida: comida || currentLote(),
+    enviado: !!enviado,
+  });
+  ensureWorkers();
+  state.loggingIn = false;
+  state.extraOn = false;
+  state.lastSpeak = "";
+  dismissAlert();
+  store.clearMesa();
+  show("home");
+  if (enviado && !person.emergencia) {
+    state.extraOn = false;
+    store.clearMesa();
+    speak("Hoy ya envió. Solo extra. La lista empieza vacía.", { flush: true });
+    setScanLive("Ya envió. Pulse Extra. La lista inicia vacía.", false);
+    return;
+  }
+  if (person.emergencia) {
+    speak("Almuerzo normal. Escanee a cada persona.", { flush: true });
+    setScanLive("Almuerzo normal. Acerca el QR.", true);
+    return;
+  }
+  offerSupervisorOwnLunch(person);
+}
+
 function showLoginGate(person) {
   const dni = normalizeDni(person?.dni || person?.id);
   if (!isSesionDni(dni)) {
     speak("Código no válido. Solo el DNI.");
-    return;
-  }
-  if (!navigator.onLine) {
-    speak("Se necesita señal para iniciar sesión");
-    showAlert(
-      "Se necesita señal",
-      "Para entrar hay que preguntar al servidor si este supervisor ya mandó hoy. Así el segundo celular sale bloqueado y solo Extra. Conecte internet e intente de nuevo."
-    );
     return;
   }
   const ap = twoApellidos(person);
@@ -1842,12 +2084,40 @@ function showLoginGate(person) {
   scanner.setBusy(false);
   scanner.pause();
   scanner.stop();
-  const turnoReady = checkTurno({
-    supervisorId: dni,
-    fecha: todayKey(TZ),
-    comida: currentLote(),
+  const askTurno = navigator.onLine && !person.emergencia;
+  let turnoResult = null;
+  const turnoReady = askTurno
+    ? checkTurno({
+      supervisorId: dni,
+      fecha: todayKey(TZ),
+      comida: currentLote(),
+      timeoutMs: 4000,
+    }).then((r) => {
+      turnoResult = r;
+      return r;
+    }).catch(() => null)
+    : Promise.resolve(null);
+  const greet = speakName ? `Bienvenido ${speakName}` : "Bienvenido";
+  let barDone = false;
+  let voiceDone = false;
+  let entered = false;
+  const tryEnter = () => {
+    if (entered || !barDone || !voiceDone) return;
+    entered = true;
+    finishLogin();
+  };
+  speak(greet, {
+    flush: true,
+    onDone: () => {
+      voiceDone = true;
+      tryEnter();
+    },
   });
-  speak(speakName ? `Bienvenido ${speakName}` : "Bienvenido", { flush: true });
+  const voiceCap = Math.min(14000, Math.max(4800, 700 + greet.length * 180));
+  window.setTimeout(() => {
+    voiceDone = true;
+    tryEnter();
+  }, voiceCap);
   openAlert(`<div class="modal-back login-gate" data-act="stay">
     <div class="modal login-load" role="dialog" aria-modal="true" data-act="stay">
       <p class="login-kicker">Q BERRIES</p>
@@ -1860,10 +2130,35 @@ function showLoginGate(person) {
   const bar = document.getElementById("login-bar");
   const pct = document.getElementById("login-pct");
   const start = performance.now();
-  const dur = 2400;
+  const dur = voiceEnabled() ? Math.min(5600, Math.max(1800, greet.length * 95)) : 650;
+  function finishLogin() {
+    const r = turnoResult?.ok ? turnoResult : null;
+    const enviado = person.emergencia ? false : (r ? !!r.enviado : localAlreadySent(dni));
+    enterSession(person, {
+      enviado,
+      fecha: r?.fecha || todayKey(TZ),
+      comida: r?.comida || currentLote(),
+    });
+    if (!askTurno || r) return;
+    turnoReady.then((late) => {
+      if (!late?.ok || !late.enviado || person.emergencia) return;
+      if (normalizeDni(supervisor()?.dni) !== dni) return;
+      store.setTurnoDia({
+        dni,
+        fecha: late.fecha || todayKey(TZ),
+        comida: late.comida || currentLote(),
+        enviado: true,
+      });
+      if (alertIsOpen()) {
+        dismissAlert();
+        store.clearMesa();
+      }
+      refreshHomeLock();
+    }).catch(() => {});
+  };
   const tick = (now) => {
     const t = Math.min(1, (now - start) / dur);
-    const p = Math.round((1 - (1 - t) ** 3) * 100);
+    const p = Math.round(t * 100);
     if (bar) bar.style.width = `${p}%`;
     if (pct) pct.textContent = `${p}%`;
     if (t < 1) {
@@ -1872,50 +2167,8 @@ function showLoginGate(person) {
     }
     if (bar) bar.style.width = "100%";
     if (pct) pct.textContent = "100%";
-    window.setTimeout(async () => {
-      let r = null;
-      try {
-        r = await Promise.race([
-          turnoReady,
-          new Promise((resolve) => window.setTimeout(() => resolve({ ok: false, error: "timeout" }), 8000)),
-        ]);
-      } catch {
-        r = { ok: false, error: "sin_red" };
-      }
-      if (!r?.ok) {
-        abortLogin(
-          "Se necesita señal",
-          "No se pudo preguntar al servidor. Sin eso no se entra. Así no se manda el almuerzo dos veces. Intente con internet."
-        );
-        return;
-      }
-      if (!store.setSesion(person)) {
-        abortLogin("No se pudo entrar", "Intente de nuevo el QR.");
-        return;
-      }
-      state.extraOn = false;
-      store.setTurnoDia({
-        dni,
-        fecha: r.fecha || todayKey(TZ),
-        comida: r.comida || currentLote(),
-        enviado: !!r.enviado,
-      });
-      ensureWorkers();
-      state.loggingIn = false;
-      state.lastSpeak = "";
-      dismissAlert();
-      store.clearMesa();
-      show("home");
-      // Extra solo si ESTE DNI ya cerró/envió almuerzo hoy en el servidor.
-      if (r.enviado) {
-        state.extraOn = false;
-        store.clearMesa(); // Extra / bloqueado: inicio siempre vacío
-        speak("Hoy ya envió. Solo extra. La lista empieza vacía.", { flush: true });
-        setScanLive("Ya envió. Pulse Extra. La lista inicia vacía.", false);
-      } else {
-        offerSupervisorOwnLunch(person);
-      }
-    }, 280);
+    barDone = true;
+    tryEnter();
   };
   requestAnimationFrame(tick);
 }
@@ -1947,7 +2200,7 @@ function homeView() {
   state.formType = "pedido";
   const s = supervisor();
   const mesa = getMesa();
-  const slice = pageSlice(mesa);
+  const slice = pageSlice(mesaForList(mesa));
   render(`<div class="shell${isSendLocked() ? " is-locked" : ""}">
     ${appBar({ title: "Solicitud de almuerzo", sub: `Turno · ${twoApellidos(s) || "supervisor"}${s?.emergencia ? " · Emergencia" : ""}` })}
     <div class="scroll">
@@ -1962,6 +2215,7 @@ function homeView() {
         ${scanHitBox()}
       </section>
       ${mesaCountCard(mesa.length)}
+      ${mesaFindBox()}
       <div class="mesa" id="mesa-list">${mesaRows(mesa)}</div>
       <div id="mesa-pager">${pagerHtml(slice.page, slice.pages)}</div>
     </div>
@@ -2448,7 +2702,10 @@ function handleOneScan(raw, opId) {
   if (state.scanMode === "sup") {
     const hit = findSupervisor(parsed);
     if (hit) {
-      state.emergencyPending = false;
+      if (state.emergencyPending) {
+        showLoginGate({ ...hit, emergencia: true });
+        return true;
+      }
       showLoginGate(hit);
       return true;
     }
@@ -2523,9 +2780,10 @@ async function sendLista() {
     warnLocked();
     return;
   }
-  let extra = !!state.extraOn;
-  if (extra && !hasSavedSend()) {
-    showAlert("Todavía no", "Primero envíe el almuerzo del turno. Después puede mandar extras, también sin señal.");
+  let extra = !!state.extraOn && hasSavedSend();
+  if (state.extraOn && !extra) {
+    state.extraOn = false;
+    showAlert("Todavía no", "Primero envíe el almuerzo normal. Extra solo después de ese envío.");
     return;
   }
   const mesa = getMesa();
@@ -2549,7 +2807,8 @@ async function sendLista() {
       supervisor_apellido: supervisorNombreCompleto(s),
       supervisor_apellido_nombre: supervisorNombreCompleto(s),
       hizo_pedido: true,
-      extra,
+      extra: extra === true,
+      tipo: extra ? "extra" : "normal",
       trabajadores_unicos: n,
       fundo: currentFundo(),
       comida,
@@ -2576,7 +2835,7 @@ async function sendLista() {
   const online = navigator.onLine;
   speak(extra
     ? (online ? `Extra: ${n} ${mealWord(comida, n)} al ${currentComedor()}` : `Sin señal. Extra guardado.`)
-    : (online ? `Se pidió ${n} ${mealWord(comida, n)} al ${currentComedor()}` : `Sin señal. Quedó guardado.`));
+    : (online ? `Normal: se pidió ${n} ${mealWord(comida, n)} al ${currentComedor()}` : `Sin señal. Almuerzo normal guardado.`));
   saveAndSync(record).then(async (result) => {
     if (result.status === "enviado") {
       setMesa(getMesa().map((p) => ({ ...p, status: "enviado" })));
@@ -2646,8 +2905,14 @@ async function saveCierre() {
   const calc = computeHeadcount(recordsOfToday(TZ));
   const t = nowParts(TZ);
   const comentario = document.getElementById("cierreCom")?.value || "";
-  const result = await saveAndSync({
-    clientId: uuid(),
+  const sid = normalizeDni(s.dni || s.id);
+  const pendingCierre = store.getCola().find((r) => (
+    r.type === "cierre"
+    && r.payload?.fecha_local === t.fecha
+    && normalizeDni(r.payload?.supervisor_id) === sid
+  ));
+  const job = saveAndSync({
+    clientId: pendingCierre?.clientId || uuid(),
     type: "cierre",
     payload: {
       fecha_local: t.fecha,
@@ -2663,17 +2928,29 @@ async function saveCierre() {
     },
     createdAt: Date.now(),
   });
-  speak(result.status === "enviado" ? "Cierre listo" : "Cierre guardado");
+  const quick = await Promise.race([
+    job,
+    new Promise((resolve) => setTimeout(() => resolve(null), 1600)),
+  ]);
+  speak(quick?.status === "enviado" ? "Cierre listo" : "Cierre guardado");
   show("summary");
+  if (!quick) {
+    job.then((done) => {
+      if (done?.status === "enviado") speak("Cierre listo");
+      refreshPendPill();
+    }).catch(() => {});
+  }
 }
 
 async function doSync() {
   if (!store.getScriptUrl()) {
     speak("Aún no se puede enviar. Pide ayuda a oficina.");
-    show("sync");
+    if (state.view === "sync") show("sync");
     return;
   }
   const sum = await flushQueue();
+  refreshPendPill();
+  if (state.view !== "sync") return;
   if (sum.sent && !sum.pending) speak("Todo enviado");
   else if (sum.pending) speak("Quedó guardado. Se envía al tener señal.");
   else speak("Nada por enviar");
@@ -2698,7 +2975,7 @@ async function onClick(e) {
     e.stopPropagation();
     return;
   }
-  const once = ["send-lista", "reload-app", "clear-cache", "logout", "drop-mesa", "save-temp-person", "save-emergency-name", "keep-sup-lunch", "drop-sup-lunch", "add-emergency-sup", "confirm-emergency", "enter"];
+  const once = ["send-lista", "reload-app", "clear-cache", "logout", "drop-mesa", "save-temp-person", "save-emergency-name", "keep-sup-lunch", "drop-sup-lunch", "add-emergency-sup", "confirm-emergency", "enter", "open-dni-login", "submit-dni-login"];
   if (once.includes(act)) {
     if (tapLock) return;
     tapLock = true;
@@ -2724,7 +3001,7 @@ async function onClick(e) {
     if (state.view === "supervisor" || state.view === "home") resumeCam();
     return;
   }
-  if (act === "start-cam") { unlockVoice(); startCamHere(); return; }
+  if (act === "start-cam") { unlockVoice(); startCamHere(true); return; }
   if (act === "stop-cam") { scanner.stop(); return; }
   if (act === "enter") { enterApp(); return; }
   if (act === "install-app") { installApp(); return; }
@@ -2881,6 +3158,15 @@ async function onClick(e) {
     toggleEmergencySup();
     return;
   }
+  if (act === "open-dni-login") {
+    if (state.view !== "supervisor" || state.loggingIn) return;
+    showDniLoginModal(!!state.emergencyPending);
+    return;
+  }
+  if (act === "submit-dni-login") {
+    submitTypedDni(btn.dataset.cualquiera === "1");
+    return;
+  }
   if (act === "confirm-emergency") {
     dismissAlert();
     resumeCam();
@@ -2904,20 +3190,32 @@ async function onClick(e) {
   }
   if (act === "keep-sup-lunch") {
     dismissAlert();
-    resumeCam();
     refreshMesaUi();
-    speak("Almuerzo del supervisor listo.", { flush: true });
     setScanLive("Supervisor en lista. Escanee al siguiente.", true);
+    window.setTimeout(() => {
+      speak("Almuerzo del supervisor listo.", { flush: true });
+      resumeCam();
+      refreshHomeLock();
+    }, 40);
     return;
   }
   if (act === "drop-sup-lunch") {
     const id = normalizeDni(btn.dataset.id || "");
+    const who = getMesa().find((p) => normalizeDni(p.id) === id);
+    const nombre = prepareSpeakName(who) || displayName(who) || "el supervisor";
     if (id) removeMesaPerson(id);
     dismissAlert();
-    resumeCam();
+    if (id) {
+      scanner.forget(id);
+      markProcessedQR(id);
+    }
     refreshMesaUi();
-    speak("Quitado. Escanee a quien corresponda.", { flush: true });
-    setScanLive("Lista limpia. Acerca el QR.", true);
+    setScanLive(`${nombre}. Quitado. Acerca el siguiente QR.`, true);
+    window.setTimeout(() => {
+      speak(nombre ? `${nombre}, quitado.` : "Quitado de la lista.", { flush: true });
+      resumeCam();
+      refreshHomeLock();
+    }, 80);
     return;
   }
   if (act === "add-temp-person") {
@@ -2959,11 +3257,12 @@ async function onClick(e) {
     const id = normalizeDni(btn.dataset.id || "");
     if (!id) return;
     const who = getMesa().find((p) => normalizeDni(p.id) === id);
+    const nombre = prepareSpeakName(who) || displayName(who);
     removeMesaPerson(id);
     dismissAlert();
     refreshMesaUi();
     unlockWorkerScan(id);
-    speak(who ? `Quité a ${who.apellido || twoApellidos(who)}.` : "Quitado de la lista.");
+    speak(nombre ? `${nombre}, quitado.` : "Quitado de la lista.", { flush: true });
     setScanLive("Listo. Acerca el QR.", true);
     return;
   }
@@ -2994,7 +3293,14 @@ async function onClick(e) {
     const pick = btn.dataset.pick;
     const id = btn.dataset.id;
     const lab = btn.dataset.label || btn.textContent.trim();
-    if (pick === "sel-fundo" || pick === "sel-etapa") store.setPrefs({ fundo: id, etapa: id });
+    if (pick === "sel-fundo" || pick === "sel-etapa") {
+      const halls = comedores(id);
+      const comedor = halls.includes(store.getPrefs().comedor) ? store.getPrefs().comedor : halls[0];
+      store.setPrefs({ fundo: id, etapa: id, comedor });
+      closePicks();
+      if (document.querySelector(".summary-modal")) showSummaryModal();
+      return;
+    }
     if (pick === "sel-comedor") store.setPrefs({ comedor: id });
     const wrap = btn.closest(".pick");
     if (wrap) {
@@ -3165,6 +3471,17 @@ async function boot() {
       if (!list) return;
       list.innerHTML = state.view === "picksup" ? supervisorRows(state.pickQuery) : workerRows(state.pickQuery);
     }
+    if (e.target.id === "mesa-q") {
+      const clean = String(e.target.value || "").replace(/\D/g, "").slice(0, 8);
+      if (e.target.value !== clean) {
+        e.target.value = clean;
+        e.target.setSelectionRange(clean.length, clean.length);
+      }
+      state.mesaQuery = clean;
+      state.mesaPage = 1;
+      refreshMesaUi();
+      return;
+    }
     if (e.target.id === "comentario" || e.target.id === "dieta" || e.target.id === "alergias") {
       grabFields();
       persistDraft();
@@ -3188,6 +3505,7 @@ async function boot() {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
       scanner.pause();
+      try { store.checkpoint(); } catch { /* la cola ya está en local */ }
       return;
     }
     if (document.visibilityState === "visible") {
@@ -3205,6 +3523,9 @@ async function boot() {
         if (supervisor()) syncTurnoDelDia().then(() => refreshHomeLock());
       });
     }
+  });
+  window.addEventListener("pagehide", () => {
+    try { store.checkpoint(); } catch { /* la cola ya está en local */ }
   });
   window.addEventListener("pageshow", () => {
     state.online = navigator.onLine;
@@ -3255,10 +3576,10 @@ async function boot() {
   state.oficial = state.supByDni;
   state.workers = [];
   if (cfg.appsScriptUrl) store.setScriptUrl(cfg.appsScriptUrl);
-  dropScanCola();
   ensureWorkers();
 
   await store.restoreSesion();
+  dropScanCola();
   const hash = viewFromHash();
   const wasUpdating = (() => {
     try { return !!sessionStorage.getItem("qb_updating"); } catch { return false; }

@@ -80,8 +80,10 @@ var PACK_MEMO = {};
 
 var COMEDORES = [
   "Comedor 1", "Comedor 2", "Comedor 3", "Comedor 4", "Comedor 5",
+  "Galpon", "Oficina Tecnica", "Comedor Administrativo",
   "Comedor 6", "Comedor 7", "Comedor 8", "Comedor 9", "Comedor 10",
-  "Comedor 11", "Comedor Galpón", "Garita 1", "Garita 2", "Comedor Administrativo"
+  "Comedor Principal - II",
+  "Comedor 11"
 ];
 
 function doGet(e) {
@@ -262,7 +264,7 @@ function workerSave(body) {
     var modulo = cell(p.modulo, 12);
     var turnoCampo = cell(p.turno_campo, 12);
     var type = String(body.type || "").toLowerCase();
-    var extra = type === "extra" || p.extra === true;
+    var extra = (type === "extra" || p.extra === true) && p.tipo !== "normal";
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
     if (type === "cierre") {
@@ -671,17 +673,14 @@ function dedupeActivas(list) {
       out.push(r);
       continue;
     }
-    var key = r.dni + "|" + r.date;
-    if (!seen[key]) {
-      seen[key] = true;
-      r = copyRsv(r);
-      out.push(r);
-    } else {
-      r = copyRsv(r);
-      r.extra = true;
-      r.tipo = "extra";
-      out.push(r);
-    }
+    var normal = !r.extra;
+    var key = r.dni + "|" + r.date + "|" + (normal ? "normal" : "extra");
+    if (seen[key]) continue;
+    seen[key] = true;
+    r = copyRsv(r);
+    r.extra = !normal;
+    r.tipo = normal ? "lista" : "extra";
+    out.push(r);
   }
   return out;
 }
@@ -1406,7 +1405,9 @@ function canonSede(raw) {
   var s = String(raw || "").replace(/\s+/g, " ").trim();
   if (!s) return "";
   var f = fold(s);
-  if (f === "galpon" || f === "comedor galpon") return "Comedor Galpón";
+  if (f === "galpon" || f === "comedor galpon") return "Galpon";
+  if (f === "oficina tecnica") return "Oficina Tecnica";
+  if (f === "comedor principal - ii" || f === "comedor principal ii" || f === "principal ii") return "Comedor Principal - II";
   if (f === "garita 1" || f === "garita1") return "Garita 1";
   if (f === "garita 2" || f === "garita2") return "Garita 2";
   if (f === "administrativo" || f === "comedor administrativo") return "Comedor Administrativo";

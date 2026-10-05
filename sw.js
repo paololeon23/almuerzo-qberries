@@ -1,4 +1,4 @@
-const CACHE_NAME = "cocina-qb-v186";
+const CACHE_NAME = "cocina-qb-v211";
 
 const PRECACHE = [
   "./",
@@ -112,27 +112,35 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (!sameOrigin(url)) return;
 
+  const offline = self.navigator && self.navigator.onLine === false;
+  const missed = () => new Response("", { status: 504, statusText: "offline" });
+
   if (wantsNetwork(req)) {
     event.respondWith(
-      fetch(req)
-        .then((res) => {
-          putInCache(req, res);
-          return res;
-        })
-        .catch(() => fromCache(req))
+      offline
+        ? fromCache(req).then((hit) => hit || missed())
+        : fetch(req)
+          .then((res) => {
+            putInCache(req, res);
+            return res;
+          })
+          .catch(() => fromCache(req).then((hit) => hit || missed()))
     );
     return;
   }
 
-  event.respondWith(
-    fromCache(req).then((hit) => {
-      if (hit) return hit;
-      return netFetch(req).then((res) => {
-        putInCache(req, res);
-        return res;
-      }).catch(() => fromCache(req));
-    })
-  );
+  event.respondWith((async () => {
+    const hit = await fromCache(req);
+    if (hit) return hit;
+    if (offline) return missed();
+    try {
+      const res = await netFetch(req);
+      putInCache(req, res);
+      return res;
+    } catch {
+      return (await fromCache(req)) || missed();
+    }
+  })());
 });
 
 self.addEventListener("message", (event) => {

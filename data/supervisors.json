@@ -7,8 +7,8 @@
     "macroPartida": "COSTO DE COSECHA",
     "actividad": "SUPERVISOR DE COSECHA"
   },
-  "count": 73,
-  "updatedAt": "2026-08-21T15:35:00.000Z",
+  "count": 85,
+  "updatedAt": "2026-10-05T16:05:00.000Z",
   "byDni": {
     "18851808": {
       "nombre": "AGUIRRE NORIEGA MARCO ANTONIO",
@@ -516,6 +516,90 @@
     "77160560": {
       "nombre": "HUAMAN ESPARZA EDELMIRA",
       "cargo": "SUPERVISOR DE COSECHA",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "44456891": {
+      "nombre": "PONCE RUIZ FERNANDO",
+      "cargo": "SUPERVISOR DE COSECHA",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "70749513": {
+      "nombre": "HUAMAN CASTRO ARNOLD HENRY",
+      "cargo": "AUXILIAR DE CAMPO",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "72327656": {
+      "nombre": "MARIÑAS CAMACHO RICHARDSON ALDEIR",
+      "cargo": "AUXILIAR DE ALMACÉN",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "72911037": {
+      "nombre": "VASQUEZ COTRINA EVELYN RUVIT",
+      "cargo": "DIGITADOR DE SANIDAD",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "75078541": {
+      "nombre": "LEON VARGAS DEYSI TATIANA",
+      "cargo": "SCANER",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "19085520": {
+      "nombre": "RODRIGUEZ GUTIERREZ SANTOS RUBEN",
+      "cargo": "SUPERVISOR DE COSECHA",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "46502316": {
+      "nombre": "CHAVEZ BARBARAN DENYS DANLER",
+      "cargo": "SUPERVISOR DE COSECHA",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "74458773": {
+      "nombre": "PONCE JARA JAVIER ORLANDO",
+      "cargo": "SUPERVISOR DE COSECHA",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "81560694": {
+      "nombre": "VILLANUEVA FLORES JACKELINE",
+      "cargo": "SUPERVISOR DE COSECHA",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "72751676": {
+      "nombre": "ROJAS ALVA CRISTIAN FELIPE",
+      "cargo": "AUXILIAR DE GESTION HUMANA",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "70840494": {
+      "nombre": "CHAVEZ ARGOMEDO MARIALENA MEDALITH",
+      "cargo": "COORDINADORA DE BIENESTAR SOCIAL",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "46762564": {
+      "nombre": "MUÑOZ TORRES ELIANA BEATRIZ",
+      "cargo": "TRABAJADORA DE BIENESTAR SOCIAL",
       "celular": "",
       "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
       "encargadoDni": "77795510"

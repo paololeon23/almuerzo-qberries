@@ -7,7 +7,19 @@ import {
   isSesionDni,
 } from "./config.js";
 
+const mem = new Map();
+
+function cloneData(value) {
+  if (typeof structuredClone === "function") {
+    try { return structuredClone(value); } catch { /* JSON */ }
+  }
+  return JSON.parse(JSON.stringify(value));
+}
+
 function read(key, fallback) {
+  try {
+    if (mem.has(key)) return cloneData(mem.get(key));
+  } catch { /* localStorage */ }
   try {
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : fallback;
@@ -17,17 +29,18 @@ function read(key, fallback) {
 }
 
 function write(key, value) {
+  try { mem.set(key, cloneData(value)); } catch { mem.set(key, value); }
   try {
     localStorage.setItem(key, JSON.stringify(value));
     return true;
   } catch {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-      return true;
-    } catch {
-      return false;
-    }
+    return false;
   }
+}
+
+function forget(key) {
+  mem.delete(key);
+  try { localStorage.removeItem(key); } catch { /* ignore */ }
 }
 
 function wipeOldSessionCookie() {
@@ -121,9 +134,20 @@ async function idbGetKv(key) {
 }
 
 function persistList(key, list) {
-  const ok = write(key, list);
-  idbPutKv(key, list);
+  const at = Date.now();
+  const snapshot = cloneData(list);
+  const ok = write(key, snapshot);
+  if (ok) {
+    try { localStorage.setItem(`${key}@at`, String(at)); } catch { /* la copia en IDB manda */ }
+  }
+  idbPutKv(key, { at, list: snapshot });
   return ok;
+}
+
+const PERSISTED_LISTS = [STORAGE_KEYS.cola, STORAGE_KEYS.mesa, STORAGE_KEYS.historial];
+
+function localStamp(key) {
+  try { return Number(localStorage.getItem(`${key}@at`)) || 0; } catch { return 0; }
 }
 
 function lsKeyExists(key) {
@@ -138,9 +162,15 @@ async function hydrateKv() {
   try {
     const keys = [STORAGE_KEYS.cola, STORAGE_KEYS.mesa, STORAGE_KEYS.historial];
     for (const key of keys) {
-      if (lsKeyExists(key)) continue;
       const fromIdb = await idbGetKv(key);
-      if (Array.isArray(fromIdb) && fromIdb.length) write(key, fromIdb);
+      const idbList = Array.isArray(fromIdb) ? fromIdb : fromIdb?.list;
+      const idbAt = Array.isArray(fromIdb) ? 0 : Number(fromIdb?.at) || 0;
+      if (!Array.isArray(idbList)) continue;
+      if (!lsKeyExists(key)) {
+        if (idbList.length) write(key, idbList);
+        continue;
+      }
+      if (idbAt > localStamp(key)) write(key, idbList);
     }
   } catch {
     /* sigue con localStorage */
@@ -224,7 +254,7 @@ export const store = {
   },
   pruneHistorial() {
     const list = read(STORAGE_KEYS.historial, []).filter((r) => Date.now() - (r.savedAt || 0) < HISTORY_TTL_MS);
-    write(STORAGE_KEYS.historial, list);
+    persistList(STORAGE_KEYS.historial, list);
   },
   getDrafts() {
     return read(STORAGE_KEYS.borradores, {});
@@ -284,12 +314,8 @@ export const store = {
     return dni;
   },
   clearSesion() {
-    try {
-      localStorage.removeItem(STORAGE_KEYS.sesion);
-      localStorage.removeItem(STORAGE_KEYS.turnoDia);
-    } catch {
-      /* ignore */
-    }
+    forget(STORAGE_KEYS.sesion);
+    forget(STORAGE_KEYS.turnoDia);
     wipeOldSessionCookie();
     idbDelDni();
   },
@@ -314,11 +340,7 @@ export const store = {
     });
   },
   clearTurnoDia() {
-    try {
-      localStorage.removeItem(STORAGE_KEYS.turnoDia);
-    } catch {
-      /* ignore */
-    }
+    forget(STORAGE_KEYS.turnoDia);
   },
   getLocalWorkers() {
     return read(STORAGE_KEYS.catalogoTrab, []);
@@ -390,6 +412,15 @@ export const store = {
   setScriptUrl(url) {
     this.setPrefs({ scriptUrl: url.trim() });
     localStorage.setItem(STORAGE_KEYS.scriptUrl, url.trim());
+  },
+  checkpoint() {
+    for (const key of PERSISTED_LISTS) {
+      if (!mem.has(key)) continue;
+      try { persistList(key, mem.get(key)); } catch { /* el cierre no puede fallar */ }
+    }
+  },
+  releaseMemory() {
+    mem.clear();
   },
 };
 

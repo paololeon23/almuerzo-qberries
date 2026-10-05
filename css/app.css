@@ -225,34 +225,44 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   display: grid;
   place-items: center;
 }
-.emerg-fab {
+.emerg-dock {
   position: fixed;
   right: max(16px, env(safe-area-inset-right, 0px));
-  bottom: calc(22px + var(--safe-b));
+  bottom: calc(18px + var(--safe-b));
   z-index: 40;
-  width: 68px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 8px;
+}
+.emerg-fab {
+  position: static;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
+  width: auto;
   height: auto;
-  min-height: 64px;
+  min-height: 50px;
   margin: 0;
-  padding: 9px 8px 8px;
-  border-radius: 18px;
+  padding: 6px 8px 5px;
+  border-radius: 14px;
   background: var(--red);
   color: #fff;
-  box-shadow: 0 8px 22px rgba(227, 30, 36, 0.42);
+  box-shadow: 0 6px 16px rgba(227, 30, 36, 0.38);
   display: grid;
   place-items: center;
-  gap: 3px;
+  gap: 2px;
 }
 .emerg-fab svg {
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   stroke-width: 2.4;
 }
 .emerg-fab b {
-  font-size: 7px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0;
-  text-transform: uppercase;
+  text-transform: none;
   line-height: 1;
   white-space: nowrap;
 }
@@ -260,11 +270,9 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--green); backgr
   background: var(--red-deep);
   box-shadow: 0 0 0 4px var(--red-soft), 0 8px 22px rgba(227, 30, 36, 0.5);
 }
+body.modal-open .emerg-dock,
 body.modal-open .emerg-fab {
   pointer-events: none;
-}
-.shell:has(.emerg-fab) .scan-fit {
-  padding-bottom: calc(96px + var(--safe-b));
 }
 .access-tag {
   display: inline-flex;
@@ -979,6 +987,8 @@ body.modal-open .emerg-fab {
   box-shadow: var(--shadow);
 }
 .empty-mesa .fork { margin: 0 auto 10px; }
+.mesa-find { display: block; margin: 0 0 10px; }
+.mesa-find .dni-search { margin: 0; }
 
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
 .stat {
@@ -1310,6 +1320,38 @@ body.modal-open .emerg-fab {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
+}
+.scan-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+.scan-panel .scan-head .section-head { padding-right: 28px; }
+.scan-head .scan-dni-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  padding: 0;
+  border-radius: 10px;
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(46, 125, 70, 0.22);
+  display: grid;
+  place-items: center;
+}
+.scan-head .scan-dni-btn svg {
+  width: 18px;
+  height: 18px;
+}
+.scan-head .scan-dni-btn.on {
+  background: var(--red);
+  box-shadow: 0 4px 10px rgba(227, 30, 36, 0.32);
 }
 .scan-fit .scan-box {
   width: min(78vw, 280px);

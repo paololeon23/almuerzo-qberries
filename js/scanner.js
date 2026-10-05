@@ -25,25 +25,79 @@ export class FieldScanner {
   async ensureJsQr() {
     if (window.jsQR) return;
     if (this._jsqrPromise) return this._jsqrPromise;
-    this._jsqrPromise = new Promise((resolve, reject) => {
-      const existing = document.querySelector('script[data-qb-jsqr]');
-      if (existing) {
-        existing.addEventListener("load", () => resolve());
-        existing.addEventListener("error", () => reject(new Error("jsqr")));
-        if (window.jsQR) resolve();
-        return;
-      }
+    this._jsqrPromise = this._loadJsQr().finally(() => {
+      if (!window.jsQR) this._jsqrPromise = null;
+    });
+    return this._jsqrPromise;
+  }
+
+  _injectScript(src) {
+    return new Promise((resolve, reject) => {
       const s = document.createElement("script");
-      s.src = "./js/vendor/jsqr.js";
+      s.src = src;
       s.async = true;
       s.dataset.qbJsqr = "1";
       s.onload = () => resolve();
       s.onerror = () => reject(new Error("jsqr"));
       document.head.appendChild(s);
-    }).finally(() => {
-      if (!window.jsQR) this._jsqrPromise = null;
     });
-    return this._jsqrPromise;
+  }
+
+  async _loadJsQr() {
+    if (window.jsQR) return;
+    try {
+      await this._injectScript("./js/vendor/jsqr.js");
+    } catch {
+      /* sin red el archivo igual puede estar en la caché de la app */
+    }
+    if (window.jsQR) return;
+    if (!("caches" in window)) throw new Error("jsqr");
+    const hit = await caches.match("./js/vendor/jsqr.js", { ignoreSearch: true });
+    if (!hit) throw new Error("jsqr");
+    const blob = new Blob([await hit.text()], { type: "text/javascript" });
+    const url = URL.createObjectURL(blob);
+    try {
+      await this._injectScript(url);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+    if (!window.jsQR) throw new Error("jsqr");
+  }
+
+  _openCamera() {
+    const md = navigator.mediaDevices;
+    const attempts = [
+      { audio: false, video: { facingMode: { ideal: "environment" } } },
+      { audio: false, video: true },
+    ];
+    const run = (i) => md.getUserMedia(attempts[i]).catch((err) => {
+      const name = err?.name || "";
+      if (name === "NotAllowedError" || name === "SecurityError" || name === "PermissionDeniedError") throw err;
+      if (i + 1 < attempts.length) return run(i + 1);
+      throw err;
+    });
+    return run(0);
+  }
+
+  _armDetector() {
+    this.detector = null;
+    this._detectFails = 0;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+    if (!("BarcodeDetector" in window)) return;
+    try {
+      this.detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+    } catch {
+      try { this.detector = new window.BarcodeDetector(); } catch { this.detector = null; }
+    }
+  }
+
+  async _play(videoEl) {
+    try {
+      await videoEl.play();
+      return;
+    } catch { /* un frame más y se reintenta */ }
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    await videoEl.play();
   }
 
   pause() {
@@ -88,75 +142,117 @@ export class FieldScanner {
     this.onBusy = onBusy || null;
   }
 
-  async start(videoEl, onCode, onBusy) {
-    if (this.isLiveOn(videoEl)) {
+  _cutStream() {
+    this.active = false;
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+    if (this.stream) {
+      this.stream.getTracks().forEach((t) => {
+        try { t.stop(); } catch { /* ignore */ }
+      });
+      this.stream = null;
+    }
+    const video = this.videoEl;
+    if (video) {
+      try {
+        video.pause();
+        video.srcObject = null;
+      } catch { /* ignore */ }
+    }
+  }
+
+  async start(videoEl, onCode, onBusy, opts = {}) {
+    const gesture = !!opts.gesture;
+    const showing = this.isLiveOn(videoEl) && videoEl.videoWidth > 0;
+    if (!gesture && showing) {
       this.bindHandlers(onCode, onBusy);
       this.paused = false;
       this._flushPending();
       if (!this.timer && !this._tickRunning) this._scheduleTick(this.gen);
       return true;
     }
+    if (!gesture && this._opening) {
+      this.bindHandlers(onCode, onBusy);
+      return this._opening;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error("sin_camara");
 
+    if (gesture) this._cutStream();
+    // getUserMedia va en este mismo toque, antes de cualquier await.
+    const camPromise = this._openCamera();
     const gen = ++this.gen;
-    await this.stop(true);
-    this.active = true;
-    this.paused = false;
-    this.busy = false;
-    this.pending = null;
-    this.videoEl = videoEl;
-    this.bindHandlers(onCode, onBusy);
+    const run = this._begin(gen, videoEl, onCode, onBusy, camPromise);
+    this._opening = run.finally(() => {
+      if (this._opening === run) this._opening = null;
+    });
+    return this._opening;
+  }
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      throw new Error("sin_camara");
-    }
-    if ("BarcodeDetector" in window) {
-      try {
-        this.detector = new window.BarcodeDetector({ formats: ["qr_code"] });
-      } catch {
-        try { this.detector = new window.BarcodeDetector(); } catch { this.detector = null; }
+  async _begin(gen, videoEl, onCode, onBusy, camPromise) {
+    try {
+      await this.stop(true);
+      if (gen !== this.gen) {
+        this._releaseLater(camPromise);
+        return false;
       }
-    }
+      this.active = true;
+      this.paused = false;
+      this.busy = false;
+      this.pending = null;
+      this.videoEl = videoEl;
+      this.bindHandlers(onCode, onBusy);
+      this._armDetector();
 
-    let stream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      });
-    } catch {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
-    }
-    if (gen !== this.gen) {
-      stream.getTracks().forEach((t) => t.stop());
-      return false;
-    }
-    this.stream = stream;
-    videoEl.srcObject = stream;
-    videoEl.setAttribute("playsinline", "true");
-    videoEl.setAttribute("webkit-playsinline", "true");
-    videoEl.muted = true;
-    videoEl.playsInline = true;
-    try {
-      await videoEl.play();
-    } catch {
-      throw new Error("sin_camara");
-    }
-    if (gen !== this.gen) return false;
+      const stream = await camPromise;
+      if (gen !== this.gen || !this.active) {
+        stream.getTracks().forEach((t) => t.stop());
+        return false;
+      }
+      const target = (document.getElementById("cam") && document.body.contains(videoEl))
+        ? videoEl
+        : (document.getElementById("cam") || videoEl);
+      this.videoEl = target;
+      this.stream = stream;
+      target.srcObject = stream;
+      target.muted = true;
+      target.playsInline = true;
+      target.setAttribute("playsinline", "true");
+      target.setAttribute("webkit-playsinline", "true");
+      try {
+        await this._play(target);
+      } catch {
+        stream.getTracks().forEach((t) => t.stop());
+        if (this.stream === stream) this.stream = null;
+        throw new Error("sin_camara");
+      }
+      if (gen !== this.gen || !this.active) return false;
 
-    if (!this.detector) {
-      try { await this.ensureJsQr(); } catch { /* cámara igual abre */ }
+      if (!window.jsQR) this.ensureJsQr().catch(() => {});
+      if (!this.canvas) {
+        this.canvas = document.createElement("canvas");
+        this.ctx = this.canvas.getContext("2d", { willReadFrequently: true });
+      }
+      this._scheduleTick(gen);
+      return true;
+    } catch (err) {
+      if (gen === this.gen) {
+        this.active = false;
+        if (this.stream) {
+          this.stream.getTracks().forEach((t) => t.stop());
+          this.stream = null;
+        }
+      }
+      this._releaseLater(camPromise);
+      throw err;
     }
-    if (!this.canvas) {
-      this.canvas = document.createElement("canvas");
-      this.ctx = this.canvas.getContext("2d", { willReadFrequently: true });
-    }
+  }
 
-    this._scheduleTick(gen);
-    return true;
+  _releaseLater(camPromise) {
+    camPromise.then((stream) => {
+      if (this.stream !== stream) stream.getTracks().forEach((t) => t.stop());
+    }).catch(() => {});
   }
 
   _scheduleTick(gen) {
@@ -194,6 +290,8 @@ export class FieldScanner {
         this.ctx.drawImage(videoEl, sx, sy, side, side, 0, 0, size, size);
 
         let value = "";
+        const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+        if (offline) this.detector = null;
         if (this.detector) {
           try {
             const codes = await Promise.race([
@@ -202,10 +300,13 @@ export class FieldScanner {
             ]);
             if (gen !== this.gen || !this.active) return;
             value = String(codes?.[0]?.rawValue || "").trim();
+            this._detectFails = 0;
           } catch {
-            /* next decoder */
+            this._detectFails = (this._detectFails || 0) + 1;
+            if (this._detectFails >= 2) this.detector = null;
           }
         }
+        if (!value && !window.jsQR) this.ensureJsQr().catch(() => {});
         if (!value && window.jsQR) {
           try {
             const img = this.ctx.getImageData(0, 0, size, size);
