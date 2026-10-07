@@ -3,7 +3,7 @@ import { bindAppHeight, bindFieldLock, isFieldDevice, preventBounce } from "./de
 import { recordsOfToday, store } from "./store.js";
 import { onVoiceState, setVoiceEnabled, speak, speakPersonName, prepareSpeakName, unlockVoice, voiceEnabled, isSpeaking } from "./voice.js";
 import { computeHeadcount } from "./calc.js";
-import { armBackgroundSync, checkTurno, flushQueue, pingServer, saveAndSync, startAutoSync } from "./sync.js";
+import { armBackgroundSync, checkTurno, flushNow, flushQueue, pingServer, saveAndSync, startAutoSync } from "./sync.js";
 import { FieldScanner } from "./scanner.js";
 
 const scanner = new FieldScanner();
@@ -111,6 +111,8 @@ const state = {
   lastProcessedAt: 0,
   lastRepeatQR: "",
   lastRepeatAt: 0,
+  speechLockDni: "",
+  speechLockUntil: 0,
   scanTimestamp: 0,
   scanWaitSpeakAt: 0,
   scanToastTimer: 0,
@@ -352,7 +354,7 @@ function statusPills() {
   const online = !!(state.online && navigator.onLine);
   return `<div class="appbar-status">
     <span class="pill ${online ? "live" : "off"}"><i></i>${online ? "En línea" : "Sin señal"}</span>
-    <span class="pill pend"><i class="up"></i>${n} pend.</span>
+    <button class="pill pend" type="button" data-act="flush-pend" aria-label="Enviar pendientes y avisar"><i class="up"></i>${n} pend.</button>
   </div>`;
 }
 
@@ -1513,9 +1515,35 @@ function personOnMesa(dni) {
   };
 }
 
+function nameSpeechBusy(key) {
+  return !!(key && state.speechLockDni === key && Date.now() < state.speechLockUntil);
+}
+
+function holdNameSpeech(worker) {
+  const dni = normalizeDni(worker?.dni || worker?.id);
+  if (!dni) return;
+  const pauseMs = 900;
+  state.speechLockDni = dni;
+  state.speechLockUntil = Date.now() + 15000;
+  const release = () => {
+    if (state.speechLockDni !== dni) return;
+    state.speechLockUntil = Date.now() + pauseMs;
+    window.setTimeout(() => {
+      if (state.speechLockDni === dni) state.speechLockDni = "";
+    }, pauseMs);
+  };
+  const name = prepareSpeakName(worker);
+  if (!name || !voiceEnabled()) {
+    release();
+    return;
+  }
+  speak(name, { onDone: release });
+}
+
 function warnRepeatedPerson(dni, worker = null) {
   const key = normalizeDni(dni) || String(dni || "");
   const now = Date.now();
+  if (nameSpeechBusy(key)) return;
   if (key && key === state.lastProcessedQR && now - (state.lastProcessedAt || 0) < 1100) {
     return;
   }
@@ -1631,8 +1659,11 @@ function refreshPendPill() {
   net.innerHTML = `<i></i>${online ? "En línea" : "Sin señal"}`;
   let pill = wrap.querySelector(".pill.pend");
   if (!pill) {
-    pill = document.createElement("span");
+    pill = document.createElement("button");
+    pill.type = "button";
     pill.className = "pill pend";
+    pill.dataset.act = "flush-pend";
+    pill.setAttribute("aria-label", "Enviar pendientes y avisar");
     wrap.appendChild(pill);
   }
   pill.className = "pill pend";
@@ -2551,7 +2582,7 @@ function registerPerson(worker, { silent = false } = {}) {
     });
     state.mesaPage = 1;
     if (!silent) {
-      try { speakPersonName(worker); } catch { /* voz no bloquea el escaneo */ }
+      try { holdNameSpeech(worker); } catch { /* voz no bloquea el escaneo */ }
     }
     queueMicrotask(() => {
       try {
@@ -3039,6 +3070,17 @@ async function onClick(e) {
   if (act === "dismiss-alert") {
     dismissAlert();
     if (state.view === "supervisor" || state.view === "home") resumeCam();
+    return;
+  }
+  if (act === "flush-pend") {
+    askUploadPermission();
+    const n = pendingCount();
+    flushNow().then((s) => {
+      refreshPendPill();
+      if (s?.sent) return;
+      if (!n) return;
+      if (!navigator.onLine) speak("Se envía cuando vuelva la señal.", { flush: true });
+    }).catch(() => refreshPendPill());
     return;
   }
   if (act === "start-cam") { unlockVoice(); startCamHere(true); return; }

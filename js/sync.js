@@ -418,6 +418,13 @@ function kickSync() {
   if (!retryTimer) flushQueue().catch(() => {});
 }
 
+export function flushNow() {
+  preferPost = true;
+  scheduleRetry(true);
+  armBackgroundSync();
+  return flushQueue();
+}
+
 export function startAutoSync(onDone) {
   if (typeof onDone === "function") onFlushDone = onDone;
   if (!autoBound) {

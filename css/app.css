@@ -608,6 +608,7 @@ body.modal-open .emerg-fab {
   background: #f8fafc;
   color: #374151;
   box-shadow: inset 0 0 0 1px #e5e7eb;
+  cursor: pointer;
 }
 .pill.live {
   background: #ecfdf5;
