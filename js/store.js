@@ -295,8 +295,28 @@ export const store = {
     idbPutDni(dni);
     return ok;
   },
+  async applyBackgroundConfirms() {
+    const box = await idbGetKv("cola_confirmados");
+    const items = Array.isArray(box?.items) ? box.items : [];
+    if (!items.length) return;
+    const seen = new Set();
+    for (const item of items) {
+      const id = String(item?.clientId || "");
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      const row = this.getCola().find((r) => r.clientId === id);
+      if (row) {
+        this.pushHistorial({ ...row, duplicate: !!item.duplicate, confirmed: true });
+        this.removeCola(id);
+      }
+    }
+    const again = await idbGetKv("cola_confirmados");
+    const left = (Array.isArray(again?.items) ? again.items : []).filter((item) => item && !seen.has(item.clientId));
+    await idbPutKv("cola_confirmados", { at: Date.now(), items: left });
+  },
   async restoreSesion() {
     await hydrateKv();
+    try { await this.applyBackgroundConfirms(); } catch { /* la cola local sigue */ }
     const local = read(STORAGE_KEYS.sesion, null);
     let dni = normalizeDni(local?.dni || local?.id);
     if (!isSesionDni(dni)) dni = await idbGetDni();
@@ -410,8 +430,16 @@ export const store = {
     return (this.getPrefs().scriptUrl || localStorage.getItem(STORAGE_KEYS.scriptUrl) || "").trim();
   },
   setScriptUrl(url) {
-    this.setPrefs({ scriptUrl: url.trim() });
-    localStorage.setItem(STORAGE_KEYS.scriptUrl, url.trim());
+    const clean = String(url || "").trim();
+    this.setPrefs({ scriptUrl: clean });
+    try { localStorage.setItem(STORAGE_KEYS.scriptUrl, clean); } catch { /* modo privado */ }
+    if (clean) idbPutKv(STORAGE_KEYS.scriptUrl, clean);
+  },
+  whenSaved() {
+    return kvWriteChain.catch(() => {});
+  },
+  noteFlush() {
+    idbPutKv("page_flush_at", Date.now());
   },
   checkpoint() {
     for (const key of PERSISTED_LISTS) {

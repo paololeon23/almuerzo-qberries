@@ -138,7 +138,7 @@ function jsonResponse(obj, status = 200) {
   };
 }
 
-const sink = { calls: [], mode: "ok", hangGet: false, hangPost: false, failPosts: 0, hold: false };
+const sink = { calls: [], mode: "ok", hangGet: false, hangPost: false, failPosts: 0, hold: false, maxOk: 0, okSeen: 0 };
 
 function installFetch() {
   globalThis.fetch = (url, opts = {}) => new Promise((resolve, reject) => {
@@ -169,6 +169,13 @@ function installFetch() {
     if (sink.hold) {
       call.release = () => finish({ ok: true, saved: true, trabajadores: 1, total: 1 });
       return;
+    }
+    if (sink.maxOk > 0) {
+      sink.okSeen += 1;
+      if (sink.okSeen > sink.maxOk) {
+        reject(new TypeError("Failed to fetch"));
+        return;
+      }
     }
     if (sink.failPosts > 0) {
       sink.failPosts -= 1;
@@ -235,6 +242,8 @@ async function emptyQueue() {
   sink.hangGet = false;
   sink.hangPost = false;
   sink.failPosts = 0;
+  sink.maxOk = 0;
+  sink.okSeen = 0;
   sink.mode = "ok";
   for (const row of sink.calls) row.release?.();
   for (const row of [...store.getCola()]) store.removeCola(row.clientId);
@@ -596,6 +605,172 @@ async function testHttpErrorAndAbortStayQueued() {
   await emptyQueue();
 }
 
+async function testHplusWindowSkipsProbe() {
+  setLink({ online: false });
+  emit("offline");
+  sink.calls = [];
+  const id = "hplus-ventana";
+  const saved = await sync.saveAndSync(makeRecord(id, "lista", { hora_local: "10:10:10.010" }));
+  check("Sin señal el pendiente de H+ no sale", saved.status === "pendiente" && !postsFor(id).length);
+  setLink({ online: true, effectiveType: "4g", downlink: 2.5, rtt: 160 });
+  sink.calls = [];
+  const t0 = Date.now();
+  emit("online");
+  connection.emit();
+  const arrived = await waitPosts(id, 1, 1500);
+  const waited = Date.now() - t0;
+  check("Al aparecer H+ el POST sale sin ping previo", arrived && postsFor(id).length === 1 && !sink.calls.some((c) => c.method === "GET"), `${waited}ms`);
+  check("Esa ventana corta confirma una sola vez", store.getHistorial().filter((r) => r.clientId === id).length === 1 && store.getCola().every((r) => r.clientId !== id));
+  await emptyQueue();
+}
+
+async function testWeak4gSkipsProbe() {
+  setLink({ online: true, effectiveType: "4g", downlink: 3, rtt: 220 });
+  sink.calls = [];
+  const id = "hplus-debil";
+  store.upsertCola(makeRecord(id));
+  const t0 = Date.now();
+  await sync.flushQueue();
+  const waited = Date.now() - t0;
+  check("H+ con RTT alto envía sin ping", postsFor(id).length === 1 && !sink.calls.some((c) => c.method === "GET"), `${waited}ms`);
+  await emptyQueue();
+}
+
+async function testManyOn3g(count, label) {
+  setLink({ online: true, effectiveType: "3g", downlink: 0.4, rtt: 400 });
+  sink.calls = [];
+  const ids = [];
+  for (let i = 0; i < count; i += 1) {
+    const id = `${label}-${i}`;
+    ids.push(id);
+    store.upsertCola(makeRecord(id, i < Math.ceil(count / 5) ? "lista" : "extra"));
+  }
+  const t0 = Date.now();
+  const sum = await sync.flushQueue();
+  const posted = ids.map((id) => postsFor(id).length);
+  const waited = Date.now() - t0;
+  check(`${count} pendientes en 3G salen una sola vez`, sum.sent === count && posted.every((n) => n === 1) && store.getCola().length === 0, `${waited}ms ${posted.filter((n) => n !== 1).length} raros`);
+  const types = sink.calls.filter((c) => c.method === "POST").map((c) => c.body.type);
+  const firstExtra = types.indexOf("extra");
+  const lastLista = types.lastIndexOf("lista");
+  check(`${count} pendientes respetan lista antes que extra`, firstExtra === -1 || lastLista < firstExtra, types.slice(0, 3).join(">"));
+  await emptyQueue();
+}
+
+async function testSignalDropAbortsAndResumes() {
+  setLink({ online: true, effectiveType: "3g", downlink: 0.4, rtt: 400 });
+  sink.hangPost = true;
+  sink.calls = [];
+  const id = "corte-3g";
+  store.upsertCola(makeRecord(id, "lista", { hora_local: "07:07:07.007" }));
+  const job = sync.flushQueue();
+  await delay(40);
+  check("El corte ocurre con un solo POST en curso", postsFor(id).length === 1);
+  const t0 = Date.now();
+  setLink({ online: false });
+  emit("offline");
+  const sum = await job;
+  const waited = Date.now() - t0;
+  check("Si 3G desaparece, se aborta y el dato sigue pendiente", waited < 1500 && sum.pending === 1 && store.getCola().some((r) => r.clientId === id), `${waited}ms`);
+  sink.hangPost = false;
+  setLink({ online: true, effectiveType: "3g", downlink: 0.4, rtt: 400 });
+  emit("online");
+  connection.emit();
+  const back = await waitPosts(id, 2, 2000);
+  check("Al volver 3G se confirma sin duplicar", back && postsFor(id).length === 2 && store.getHistorial().filter((r) => r.clientId === id).length === 1 && store.getCola().every((r) => r.clientId !== id));
+  await emptyQueue();
+}
+
+async function testLostResponseUsesSameId() {
+  setLink({ online: true, effectiveType: "3g", downlink: 0.4, rtt: 350 });
+  sink.failPosts = 1;
+  sink.calls = [];
+  const id = "respuesta-perdida";
+  const first = await sync.saveAndSync(makeRecord(id, "lista", { hora_local: "06:06:06.006" }));
+  check("Si la respuesta no llega, el pendiente se conserva", first.status === "pendiente" && store.getCola().some((r) => r.clientId === id) && postsFor(id).length === 1);
+  sink.mode = "duplicate";
+  const sum = await sync.flushQueue();
+  const hist = store.getHistorial().filter((r) => r.clientId === id);
+  check("El reintento usa el mismo id y una confirmación basta", sum.duplicates === 1 && postsFor(id).length === 2 && hist.length === 1 && postsFor(id).every((c) => c.body.clientId === id));
+  await emptyQueue();
+}
+
+async function testShortWindowKeepsTheRest() {
+  setLink({ online: true, effectiveType: "3g", downlink: 0.3, rtt: 500 });
+  sink.calls = [];
+  sink.maxOk = 2;
+  const ids = ["win-0", "win-1", "win-2", "win-3", "win-4"];
+  ids.forEach((id, i) => {
+    const row = makeRecord(id);
+    row.createdAt = 1000 + i;
+    store.upsertCola(row);
+  });
+  const sum = await sync.flushQueue();
+  const sentIds = sink.calls.filter((c) => c.method === "POST").map((c) => c.body.clientId);
+  const left = store.getCola().map((r) => r.clientId);
+  check("En una ventana corta salen primero los más antiguos", sum.sent === 2 && sentIds[0] === "win-0" && sentIds[1] === "win-1" && left.length === 3, sentIds.join(","));
+  check("Lo no enviado sigue en la cola", left.length === 3 && sentIds.slice(0, 2).every((id) => !left.includes(id)));
+  sink.maxOk = 0;
+  sink.okSeen = 0;
+  sink.calls = [];
+  const done = await sync.flushQueue();
+  const posted = left.map((id) => postsFor(id).length);
+  check("Al volver la señal salen los que faltaban, una vez", done.sent === 3 && store.getCola().length === 0 && posted.every((n) => n === 1), posted.join(","));
+  await emptyQueue();
+}
+
+async function testRegisterWhileSyncing() {
+  setLink({ online: true, effectiveType: "3g", downlink: 0.4, rtt: 400 });
+  sink.hold = true;
+  sink.calls = [];
+  store.upsertCola(makeRecord("sync-0"));
+  store.upsertCola(makeRecord("sync-1"));
+  const job = sync.flushQueue();
+  await delay(30);
+  const t0 = Date.now();
+  const extra = sync.saveAndSync(makeRecord("sync-nuevo", "extra", { hora_local: "05:05:05.005" }));
+  await delay(40);
+  const waited = Date.now() - t0;
+  check("Registrar durante la sync no bloquea y queda guardado", waited < 500 && postsFor("sync-nuevo").length === 1 && store.getCola().some((r) => r.clientId === "sync-nuevo"), `${waited}ms`);
+  for (const row of sink.calls) row.release?.();
+  sink.hold = false;
+  await job;
+  await extra;
+  const ids = ["sync-0", "sync-1", "sync-nuevo"];
+  check("Los tres quedan confirmados una sola vez", ids.every((id) => store.getHistorial().filter((r) => r.clientId === id).length === 1 && store.getCola().every((r) => r.clientId !== id)));
+  await emptyQueue();
+}
+
+async function testSignalFlips() {
+  setLink({ online: false });
+  emit("offline");
+  const id = "flip-1";
+  await sync.saveAndSync(makeRecord(id));
+  setLink({ online: true, effectiveType: "4g", downlink: 2.2, rtt: 170 });
+  sink.calls = [];
+  emit("online");
+  connection.emit();
+  const h = await waitPosts(id, 1, 1500);
+  check("H+ envía el pendiente", h && postsFor(id).length === 1);
+  setLink({ online: true, effectiveType: "3g", downlink: 0.4, rtt: 450 });
+  connection.emit();
+  const id2 = "flip-2";
+  store.upsertCola(makeRecord(id2));
+  await sync.flushQueue();
+  check("Al bajar a 3G el nuevo pendiente sale una vez", postsFor(id2).length === 1);
+  setLink({ online: false });
+  emit("offline");
+  const id3 = "flip-3";
+  const held = await sync.saveAndSync(makeRecord(id3));
+  check("Sin internet el tercero no se pierde ni se envía", held.status === "pendiente" && !postsFor(id3).length && store.getCola().some((r) => r.clientId === id3));
+  setLink({ online: true, effectiveType: "3g", downlink: 0.4, rtt: 400 });
+  emit("online");
+  connection.emit();
+  const back = await waitPosts(id3, 1, 1500);
+  check("Al regresar 3G el tercero se confirma una vez", back && postsFor(id3).length === 1 && store.getHistorial().filter((r) => r.clientId === id3).length === 1);
+  await emptyQueue();
+}
+
 async function testPostTimeoutKeepsPending() {
   setLink({ online: true, effectiveType: "3g", downlink: 0.4, rtt: 400 });
   sink.hangPost = true;
@@ -636,6 +811,16 @@ await testCheckpointRepairsLocal();
 await testTurnoFlagDoesNotDropPending();
 await testSeveralPendingOnSlowLink();
 await testHttpErrorAndAbortStayQueued();
+await testHplusWindowSkipsProbe();
+await testWeak4gSkipsProbe();
+await testManyOn3g(10, "lote10");
+await testManyOn3g(50, "lote50");
+await testManyOn3g(100, "lote100");
+await testSignalDropAbortsAndResumes();
+await testLostResponseUsesSameId();
+await testShortWindowKeepsTheRest();
+await testRegisterWhileSyncing();
+await testSignalFlips();
 await testPostTimeoutKeepsPending();
 
 const failed = results.filter((r) => !r.ok);

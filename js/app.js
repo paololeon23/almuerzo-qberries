@@ -3,7 +3,7 @@ import { bindAppHeight, bindFieldLock, isFieldDevice, preventBounce } from "./de
 import { recordsOfToday, store } from "./store.js";
 import { onVoiceState, setVoiceEnabled, speak, speakPersonName, prepareSpeakName, unlockVoice, voiceEnabled, isSpeaking } from "./voice.js";
 import { computeHeadcount } from "./calc.js";
-import { checkTurno, flushQueue, pingServer, saveAndSync, startAutoSync } from "./sync.js";
+import { armBackgroundSync, checkTurno, flushQueue, pingServer, saveAndSync, startAutoSync } from "./sync.js";
 import { FieldScanner } from "./scanner.js";
 
 const scanner = new FieldScanner();
@@ -3506,6 +3506,7 @@ async function boot() {
     if (document.visibilityState === "hidden") {
       scanner.pause();
       try { store.checkpoint(); } catch { /* la cola ya está en local */ }
+      armBackgroundSync();
       return;
     }
     if (document.visibilityState === "visible") {
@@ -3526,6 +3527,7 @@ async function boot() {
   });
   window.addEventListener("pagehide", () => {
     try { store.checkpoint(); } catch { /* la cola ya está en local */ }
+    armBackgroundSync();
   });
   window.addEventListener("pageshow", () => {
     state.online = navigator.onLine;

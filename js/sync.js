@@ -16,7 +16,9 @@ let autoBound = false;
 let onFlushDone = null;
 let linkWasOnline = true;
 let linkWasSlow = false;
+let preferPost = false;
 const inflight = new Map();
+const activeFetches = new Set();
 
 function netInfo() {
   return navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
@@ -31,7 +33,11 @@ export function isSlowLink() {
   const down = Number(conn.downlink);
   if (Number.isFinite(down) && down > 0 && down <= 0.5) return true;
   const rtt = Number(conn.rtt);
-  if (effective !== "4g" && Number.isFinite(rtt) && rtt >= 400) return true;
+  if (!Number.isFinite(rtt)) return false;
+  if (effective !== "4g" && rtt >= 400) return true;
+  // H+ suele anunciarse como 4g. Con ese RTT un ping previo se come la ventana.
+  if (effective === "4g" && rtt >= 200) return true;
+  if (effective === "4g" && Number.isFinite(down) && down > 0 && down < 1.5) return true;
   return false;
 }
 
@@ -113,13 +119,21 @@ function isTransient(err) {
   return /^http_5\d\d$/.test(msg);
 }
 
+function abortActiveFetches() {
+  for (const ctrl of activeFetches) {
+    try { ctrl.abort(); } catch { /* ya cerrado */ }
+  }
+}
+
 async function fetchText(url, options, timeoutMs) {
   const ctrl = new AbortController();
+  activeFetches.add(ctrl);
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     return await fetch(url, { ...options, signal: ctrl.signal });
   } finally {
     clearTimeout(timer);
+    activeFetches.delete(ctrl);
   }
 }
 
@@ -262,7 +276,10 @@ export async function saveAndSync(record) {
   const queued = { ...record, payload: stampPayload(record.payload || {}) };
   store.upsertCola(queued);
   scheduleRetry();
-  if (isBrowserOffline()) return { status: "pendiente", record: queued };
+  if (isBrowserOffline()) {
+    armBackgroundSync();
+    return { status: "pendiente", record: queued };
+  }
   try {
     const result = await postRecord(queued);
     confirmSent(result);
@@ -273,22 +290,49 @@ export async function saveAndSync(record) {
     return { status: "enviado", duplicate: result.duplicate, record: result.record, raw: result.raw };
   } catch {
     scheduleRetry();
+    armBackgroundSync();
     return { status: "pendiente", record: queued };
   }
 }
 
+const BACKGROUND_SYNC_TAG = "cocina-pendientes";
+
+export function armBackgroundSync() {
+  if (!pendingRecords().length) return Promise.resolve();
+  const swReady = typeof navigator !== "undefined" ? navigator.serviceWorker?.ready : null;
+  if (!swReady) return Promise.resolve();
+  try { store.checkpoint(); } catch { /* la cola ya está en local */ }
+  const url = store.getScriptUrl();
+  if (url) store.setScriptUrl(url);
+  return store.whenSaved()
+    .then(() => swReady)
+    .then((reg) => {
+      if (!reg?.sync || !pendingRecords().length) return;
+      return reg.sync.register(BACKGROUND_SYNC_TAG);
+    })
+    .catch(() => {});
+}
+
 async function flushPass(onEach) {
   const summary = { sent: 0, duplicates: 0, errors: 0, skippedOffline: false };
+  try { await store.applyBackgroundConfirms(); } catch { /* sigue con la cola local */ }
   if (!pendingRecords().length) return summary;
+  try { store.noteFlush(); } catch { /* el envío de la página sigue */ }
   if (isBrowserOffline()) {
     summary.skippedOffline = true;
     return summary;
   }
-  if (!isSlowLink()) {
+  const direct = preferPost;
+  preferPost = false;
+  if (!direct && !isSlowLink()) {
     const probe = await probeServer();
     if (probe === "down") return summary;
   }
-  const ordered = [...pendingRecords()].sort((a, b) => flushRank(a) - flushRank(b));
+  const ordered = [...pendingRecords()].sort((a, b) => {
+    const rank = flushRank(a) - flushRank(b);
+    if (rank) return rank;
+    return (a.createdAt || 0) - (b.createdAt || 0);
+  });
   let fails = 0;
   let pass = 0;
   for (const record of ordered) {
@@ -329,7 +373,7 @@ async function flushBody(onEach) {
       retryDelay = RETRY_MIN_MS;
       return { sent, pending: 0, duplicates, errors };
     }
-    const followNow = flushAgain && pass.errors === 0 && (pass.sent > 0 || (pass.skippedOffline && !isBrowserOffline()));
+    const followNow = flushAgain && !isBrowserOffline();
     if (followNow) continue;
     if (pass.sent > 0 && pass.errors === 0) retryDelay = RETRY_MIN_MS;
     scheduleRetry(pass.sent > 0 && pass.errors === 0);
@@ -366,6 +410,7 @@ function kickSync() {
   linkWasSlow = slow;
   if (!pendingRecords().length || !online) return;
   if (becameUsable) {
+    preferPost = true;
     scheduleRetry(true);
     flushQueue().catch(() => {});
     return;
@@ -382,9 +427,11 @@ export function startAutoSync(onDone) {
     window.addEventListener("online", kickSync);
     window.addEventListener("offline", () => {
       linkWasOnline = false;
+      abortActiveFetches();
     });
     netInfo()?.addEventListener?.("change", kickSync);
   }
   scheduleRetry(true);
+  armBackgroundSync();
   return flushQueue();
 }

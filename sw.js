@@ -1,4 +1,4 @@
-const CACHE_NAME = "cocina-qb-v211";
+const CACHE_NAME = "cocina-qb-v215";
 
 const PRECACHE = [
   "./",
@@ -153,4 +153,122 @@ self.addEventListener("message", (event) => {
   if (event.data === "PULL_LATEST") {
     event.waitUntil(refreshPrecache());
   }
+});
+
+const OUTBOX_TAG = "cocina-pendientes";
+const OUTBOX_DB = "cocina-qb";
+const OUTBOX_DB_VER = 2;
+
+function outboxOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(OUTBOX_DB, OUTBOX_DB_VER);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains("kv")) db.createObjectStore("kv");
+      if (!db.objectStoreNames.contains("sesion")) db.createObjectStore("sesion");
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function outboxGet(db, key) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("kv", "readonly");
+    const req = tx.objectStore("kv").get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function outboxPut(db, key, value) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("kv", "readwrite");
+    tx.objectStore("kv").put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function outboxRank(record) {
+  if (record?.type === "lista" && !record.payload?.extra) return 0;
+  if (record?.type === "extra" || record?.payload?.extra) return 1;
+  return 2;
+}
+
+function outboxConfirmed(json, record) {
+  if (!json || json.ok !== true) return false;
+  const isExtra = record?.type === "extra" || record?.payload?.extra;
+  if (isExtra && (json.error === "sin_almuerzo" || (json.extra === false && Number(json.trabajadores || 0) === 0))) {
+    return false;
+  }
+  return json.saved === true || json.duplicate === true
+    || typeof json.total === "number" || typeof json.trabajadores === "number";
+}
+
+async function flushClosedApp() {
+  const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+  if (windows.some((client) => client.visibilityState === "visible")) return;
+  const db = await outboxOpen();
+  try {
+    const busy = await outboxGet(db, "page_flush_at");
+    if (typeof busy === "number" && Date.now() - busy < 8000) {
+      throw new Error("page_activa");
+    }
+    const colaWrap = await outboxGet(db, "cola_pendiente");
+    const cola = Array.isArray(colaWrap?.list) ? colaWrap.list.slice() : [];
+    const pending = cola
+      .filter((record) => record && (record.type === "lista" || record.type === "extra" || record.type === "cierre"))
+      .sort((a, b) => outboxRank(a) - outboxRank(b) || (a.createdAt || 0) - (b.createdAt || 0));
+    if (!pending.length) return;
+    let url = await outboxGet(db, "apps_script_url");
+    if (typeof url !== "string" || !url.trim()) {
+      const cached = await caches.match("./data/config.json");
+      if (cached) url = String((await cached.json())?.appsScriptUrl || "");
+    }
+    url = String(url || "").trim();
+    if (!url) throw new Error("sin_url");
+    const doneWrap = await outboxGet(db, "cola_confirmados");
+    let done = Array.isArray(doneWrap?.items) ? doneWrap.items.slice() : [];
+    const doneIds = new Set(done.map((item) => item && item.clientId).filter(Boolean));
+    for (const record of pending) {
+      if (self.navigator && self.navigator.onLine === false) throw new Error("sin_red");
+      if (!record.clientId || doneIds.has(record.clientId)) continue;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 45000);
+      let json;
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            type: record.type,
+            clientId: record.clientId,
+            payload: record.payload || {},
+            clientVersion: "1.3.55",
+          }),
+          cache: "no-store",
+          signal: ctrl.signal,
+        });
+        if (!res.ok) throw new Error(`http_${res.status}`);
+        json = await res.json();
+      } finally {
+        clearTimeout(timer);
+      }
+      if (!outboxConfirmed(json, record)) {
+        if (json?.error === "sin_almuerzo") continue;
+        throw new Error(json?.error || "sin_confirmacion");
+      }
+      done.push({ clientId: record.clientId, duplicate: !!json.duplicate, at: Date.now() });
+      doneIds.add(record.clientId);
+      await outboxPut(db, "cola_confirmados", { at: Date.now(), items: done.slice(-400) });
+    }
+  } finally {
+    try { db.close(); } catch { /* ignore */ }
+  }
+}
+
+self.addEventListener("sync", (event) => {
+  if (event.tag !== OUTBOX_TAG) return;
+  event.waitUntil(flushClosedApp());
 });

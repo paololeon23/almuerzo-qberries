@@ -7,8 +7,8 @@
     "macroPartida": "COSTO DE COSECHA",
     "actividad": "SUPERVISOR DE COSECHA"
   },
-  "count": 85,
-  "updatedAt": "2026-10-05T16:05:00.000Z",
+  "count": 88,
+  "updatedAt": "2026-10-07T10:09:00.000Z",
   "byDni": {
     "18851808": {
       "nombre": "AGUIRRE NORIEGA MARCO ANTONIO",
@@ -600,6 +600,27 @@
     "46762564": {
       "nombre": "MUÑOZ TORRES ELIANA BEATRIZ",
       "cargo": "TRABAJADORA DE BIENESTAR SOCIAL",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "74317270": {
+      "nombre": "PASTOR CUEVA SORAYDA ARACELY",
+      "cargo": "AUXILIAR DE RIEGO",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "75049415": {
+      "nombre": "RUIZ TIZNADO CORAIMA YSABEL",
+      "cargo": "DIGITADOR DE CALIDAD",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "76754739": {
+      "nombre": "NARRO QUIROZ JHENIFFER LIZZETT",
+      "cargo": "AUXILIAR DE RIEGO",
       "celular": "",
       "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
       "encargadoDni": "77795510"
