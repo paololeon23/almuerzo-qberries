@@ -25,7 +25,7 @@
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-bottom: var(--safe-b);
   --qb-line: #eceff1;
-  --app-height: 100svh;
+  --app-height: 100dvh;
   --vv-offset: 0px;
   --font: "SF Pro Text", "SF Pro Display", "Segoe UI Variable", "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
   --display: "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", Roboto, system-ui, sans-serif;
@@ -39,7 +39,7 @@ html, body {
   position: fixed;
   inset: 0;
   width: 100%;
-  height: 100svh;
+  height: 100dvh;
   height: var(--app-height);
   overflow: hidden;
   overflow-anchor: none;

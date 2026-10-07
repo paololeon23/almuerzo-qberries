@@ -91,25 +91,14 @@ export function prepareSpeakName(personOrText) {
 
 export function unlockVoice() {
   const s = synth();
-  if (!s) return;
+  if (!s) return false;
   try {
     if (s.paused) s.resume();
   } catch { /* iPhone */ }
   pickVoice();
   if (unlocked) return false;
   unlocked = true;
-  if (isAppleTouch()) return false;
-  try {
-    const u = new SpeechSynthesisUtterance(" ");
-    u.volume = 0;
-    u.rate = 1;
-    u.pitch = 1;
-    u.lang = "es-PE";
-    s.speak(u);
-    return true;
-  } catch {
-    return false;
-  }
+  return false;
 }
 
 function voiceScore(v) {
@@ -118,8 +107,8 @@ function voiceScore(v) {
   const blob = `${v.name} ${v.voiceURI}`;
   if (MALE.test(blob)) return -40;
   let n = 20;
-  if (v.localService === true) n += 32;
-  if (v.localService === false) n -= 6;
+  if (v.localService === true) n += 40;
+  if (v.localService === false) n -= 80;
   if (FEMALE.test(blob)) n += 60;
   if (/paulina/i.test(blob)) n += 24;
   if (/m[oó]nica|monica/i.test(blob)) n += 18;
@@ -232,12 +221,27 @@ function playNext() {
   u.onend = () => done();
   u.onerror = () => done();
   const ms = Math.min(14000, Math.max(2800, phrase.length * 150));
-  watch = window.setTimeout(() => done(), ms);
+  watch = window.setTimeout(() => {
+    releaseEngine();
+    done();
+  }, ms);
   try {
     s.speak(u);
   } catch {
     done();
   }
+}
+
+function releaseEngine() {
+  const s = synth();
+  if (!s) return;
+  try { s.cancel(); } catch { /* ignore */ }
+  try { s.resume(); } catch { /* Chrome se queda en pausa y la siguiente frase no sale */ }
+}
+
+function engineBusy() {
+  const s = synth();
+  return !!(playing || queue.length || s?.speaking || s?.pending);
 }
 
 function hardFlush() {
@@ -248,9 +252,7 @@ function hardFlush() {
   currentUtter = null;
   window.clearTimeout(watch);
   stopKeepAlive();
-  const s = synth();
-  try { s?.cancel(); } catch { /* ignore */ }
-  try { if (s?.paused) s.resume(); } catch { /* iPhone */ }
+  releaseEngine();
   onSpeak(false, "");
 }
 
@@ -265,19 +267,33 @@ export function speak(text, opts = {}) {
     if (!voiceEnabled()) { done(); return; }
     const phrase = prepareSpeakText(text, { nameOnly: false });
     if (!phrase) { done(); return; }
-    const justUnlocked = unlockVoice() === true;
+    unlockVoice();
     const s = synth();
     if (!s) { done(); return; }
     const job = { text: phrase, onDone: done };
-    if (!isAppleTouch() || opts.flush || justUnlocked) {
-      hardFlush();
+    if (!isAppleTouch()) {
+      const genBefore = speakGen;
+      if (opts.flush || engineBusy()) hardFlush();
       queue.push(job);
       const gen = speakGen;
-      const delay = isAppleTouch() ? 120 : 360;
+      if (gen === genBefore) {
+        playNext();
+        return;
+      }
       window.setTimeout(() => {
         if (gen !== speakGen) { done(); return; }
         playNext();
-      }, delay);
+      }, 280);
+      return;
+    }
+    if (opts.flush) {
+      hardFlush();
+      queue.push(job);
+      const gen = speakGen;
+      window.setTimeout(() => {
+        if (gen !== speakGen) { done(); return; }
+        playNext();
+      }, 120);
       return;
     }
     if (queue.length) queue.length = 0;

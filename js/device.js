@@ -13,11 +13,18 @@ export function isFieldDevice() {
 export function bindAppHeight() {
   const root = document.documentElement;
   const apply = () => {
-    root.style.setProperty("--app-height", `${Math.round(window.innerHeight)}px`);
+    const vv = window.visualViewport;
+    const h = Math.max(
+      Math.round(window.innerHeight || 0),
+      Math.round(vv?.height || 0)
+    );
+    if (h > 0) root.style.setProperty("--app-height", `${h}px`);
     root.style.setProperty("--vv-offset", "0px");
   };
   apply();
+  window.addEventListener("resize", apply);
   window.addEventListener("orientationchange", () => setTimeout(apply, 250));
+  window.visualViewport?.addEventListener("resize", apply);
 }
 
 export function bindFieldLock(onChange) {
