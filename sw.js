@@ -1,6 +1,6 @@
-const CACHE_NAME = "cocina-qb-v215";
+const CACHE_NAME = "cocina-qb-v221";
 
-const PRECACHE = [
+const SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
@@ -13,15 +13,20 @@ const PRECACHE = [
   "./js/calc.js",
   "./js/sync.js",
   "./js/scanner.js",
-  "./js/vendor/jsqr.js",
   "./data/config.json",
   "./data/supervisors.json",
-  "./data/trabajadores.json",
   "./assets/logo-qberries.png",
   "./icons/icon-192.png",
-  "./icons/icon-512.png",
   "./icons/apple-touch-icon.png",
 ];
+
+const LATER = [
+  "./js/vendor/jsqr.js",
+  "./data/trabajadores.json",
+  "./icons/icon-512.png",
+];
+
+const PRECACHE = SHELL.concat(LATER);
 
 function sameOrigin(url) {
   return url.origin === self.location.origin;
@@ -87,12 +92,29 @@ function putInCache(req, res) {
   caches.open(CACHE_NAME).then((c) => c.put(req, copy));
 }
 
+let restJob = null;
+function fillRest() {
+  if (restJob) return restJob;
+  restJob = (async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await Promise.all(LATER.map((path) => putFresh(cache, path)));
+    const ready = await Promise.all(LATER.map((path) => cache.match(path)));
+    if (!ready.every(Boolean)) return;
+    const clients = await self.clients.matchAll({ includeUncontrolled: true, type: "window" });
+    for (const client of clients) client.postMessage("WARM_REST_OK");
+  })().finally(() => {
+    restJob = null;
+  });
+  return restJob;
+}
+
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    refreshPrecache().then((cache) => hasShell(cache)).then((ok) => {
-      if (ok) return self.skipWaiting();
-    })
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await copyOldCaches(cache);
+    await Promise.all(SHELL.map((path) => putFresh(cache, path)));
+    if (await hasShell(cache)) await self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", (event) => {
@@ -153,6 +175,9 @@ self.addEventListener("message", (event) => {
   if (event.data === "PULL_LATEST") {
     event.waitUntil(refreshPrecache());
   }
+  if (event.data === "WARM_REST") {
+    event.waitUntil(fillRest());
+  }
 });
 
 const OUTBOX_TAG = "cocina-pendientes";
@@ -210,6 +235,7 @@ async function flushClosedApp() {
   const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
   if (windows.some((client) => client.visibilityState === "visible")) return;
   const db = await outboxOpen();
+  let uploaded = 0;
   try {
     const busy = await outboxGet(db, "page_flush_at");
     if (typeof busy === "number" && Date.now() - busy < 8000) {
@@ -245,7 +271,7 @@ async function flushClosedApp() {
             type: record.type,
             clientId: record.clientId,
             payload: record.payload || {},
-            clientVersion: "1.3.55",
+            clientVersion: "1.3.61",
           }),
           cache: "no-store",
           signal: ctrl.signal,
@@ -261,14 +287,40 @@ async function flushClosedApp() {
       }
       done.push({ clientId: record.clientId, duplicate: !!json.duplicate, at: Date.now() });
       doneIds.add(record.clientId);
+      uploaded += 1;
       await outboxPut(db, "cola_confirmados", { at: Date.now(), items: done.slice(-400) });
     }
   } finally {
     try { db.close(); } catch { /* ignore */ }
+    if (uploaded > 0 && self.registration?.showNotification) {
+      const body = uploaded === 1
+        ? "Tu pendiente se subió correctamente."
+        : "Tus pendientes se subieron correctamente.";
+      try {
+        await self.registration.showNotification("Solicitud de almuerzo", {
+          body,
+          icon: "./icons/icon-192.png",
+          badge: "./icons/icon-192.png",
+          tag: "cocina-subido",
+          renotify: true,
+          lang: "es",
+        });
+      } catch { /* sin permiso de aviso */ }
+    }
   }
 }
 
 self.addEventListener("sync", (event) => {
   if (event.tag !== OUTBOX_TAG) return;
   event.waitUntil(flushClosedApp());
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const open = windows.find((client) => client.url.includes(self.location.origin));
+    if (open) return open.focus();
+    return self.clients.openWindow("./");
+  })());
 });

@@ -1,4 +1,4 @@
-import { APP_VERSION, APP_ASSETS, FORM_TYPES, TZ, encodeQr, parseQr, normalizeDni, isSesionDni, todayKey, uuid, nowParts } from "./config.js";
+import { APP_VERSION, APP_ASSETS, CACHE_NAME, FORM_TYPES, TZ, encodeQr, parseQr, normalizeDni, isSesionDni, todayKey, uuid, nowParts } from "./config.js";
 import { bindAppHeight, bindFieldLock, isFieldDevice, preventBounce } from "./device.js";
 import { recordsOfToday, store } from "./store.js";
 import { onVoiceState, setVoiceEnabled, speak, speakPersonName, prepareSpeakName, unlockVoice, voiceEnabled, isSpeaking } from "./voice.js";
@@ -7,6 +7,15 @@ import { armBackgroundSync, checkTurno, flushQueue, pingServer, saveAndSync, sta
 import { FieldScanner } from "./scanner.js";
 
 const scanner = new FieldScanner();
+scanner.onEnded = () => {
+  if (state.camOff) return;
+  if (state.view !== "home" && state.view !== "supervisor") return;
+  if (document.visibilityState === "hidden") return;
+  const now = Date.now();
+  if (now - (state.camRestartAt || 0) < 1500) return;
+  state.camRestartAt = now;
+  startCamHere();
+};
 let deferredInstall = null;
 
 function markInstalled() {
@@ -95,6 +104,7 @@ const state = {
   workersPromise: null,
   supervisors: [],
   scanMode: "sup",
+  camOff: false,
   scanOpId: 0,
   lastDetectedQR: "",
   lastProcessedQR: "",
@@ -506,7 +516,6 @@ function refreshHomeLock() {
   if (mealBtn) mealBtn.classList.toggle("on", !state.extraOn);
   const send = document.querySelector('[data-act="go-summary"]');
   if (send) send.disabled = !getMesa().length || locked;
-  if (locked) scanner.stop();
   refreshPendPill();
 }
 
@@ -757,6 +766,7 @@ function hideUpdatingVeil() {
 }
 
 async function pullLatestFiles() {
+  try { localStorage.removeItem("qb_rest_" + CACHE_NAME); } catch { /* sigue */ }
   try {
     navigator.serviceWorker?.controller?.postMessage("CLEAR_APP_CACHE");
   } catch { /* sigue */ }
@@ -1438,11 +1448,8 @@ function framesReady(video, ms) {
 function startCamHere(fromTap = false) {
   const video = document.getElementById("cam");
   if (!video) return;
-  if (state.scanMode === "wrk" && isSendLocked()) {
-    scanner.stop();
-    setScanLive("Ya envió. Pulse Extra si alguien se olvidó o llegó tarde.", false);
-    return;
-  }
+  if (fromTap) state.camOff = false;
+  if (state.camOff) return;
   if (!fromTap && scanner.isLiveOn(video) && video.videoWidth > 0) {
     scanner.bindHandlers(onScan, onScanBusy);
     scanner.setBusy(!!state.isProcessing);
@@ -2083,7 +2090,6 @@ function showLoginGate(person) {
   state.emergencyPending = false;
   scanner.setBusy(false);
   scanner.pause();
-  scanner.stop();
   const askTurno = navigator.onLine && !person.emergencia;
   let turnoResult = null;
   const turnoReady = askTurno
@@ -2766,7 +2772,40 @@ function handleOneScan(raw, opId) {
   }
 }
 
+function askUploadPermission() {
+  try {
+    if (typeof Notification === "undefined" || Notification.permission !== "default") return;
+    Notification.requestPermission().catch(() => {});
+  } catch { /* el celular puede negar el aviso */ }
+}
+
+function notifyUploaded(count) {
+  const n = Number(count) || 0;
+  if (n < 1 || typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  const body = n === 1
+    ? "Tu pendiente se subió correctamente."
+    : "Tus pendientes se subieron correctamente.";
+  const opts = {
+    body,
+    icon: "./icons/icon-192.png",
+    badge: "./icons/icon-192.png",
+    tag: "cocina-subido",
+    renotify: true,
+    lang: "es",
+  };
+  const fallback = () => {
+    try { new Notification("Solicitud de almuerzo", opts); } catch { /* sin permiso */ }
+  };
+  const ready = navigator.serviceWorker?.ready;
+  if (!ready) { fallback(); return; }
+  ready.then((reg) => {
+    if (reg?.showNotification) reg.showNotification("Solicitud de almuerzo", opts).catch(fallback);
+    else fallback();
+  }).catch(fallback);
+}
+
 async function sendLista() {
+  askUploadPermission();
   if (state.busy) return;
   state.busy = true;
   try {
@@ -2833,9 +2872,10 @@ async function sendLista() {
   if (state.view === "home") refreshHomeLock();
   else show("home");
   const online = navigator.onLine;
+  const lugar = [currentComedor(), currentFundo()].filter(Boolean).join(", ");
   speak(extra
-    ? (online ? `Extra: ${n} ${mealWord(comida, n)} al ${currentComedor()}` : `Sin señal. Extra guardado.`)
-    : (online ? `Normal: se pidió ${n} ${mealWord(comida, n)} al ${currentComedor()}` : `Sin señal. Almuerzo normal guardado.`));
+    ? (online ? `Extra. ${n} ${mealWord(comida, n)} para ${lugar}.` : `Sin señal. Extra guardado para ${lugar}.`)
+    : (online ? `Se envió ${n} ${mealWord(comida, n)} a ${lugar}.` : `Sin señal. Almuerzo guardado para ${lugar}.`), { flush: true });
   saveAndSync(record).then(async (result) => {
     if (result.status === "enviado") {
       setMesa(getMesa().map((p) => ({ ...p, status: "enviado" })));
@@ -3002,7 +3042,12 @@ async function onClick(e) {
     return;
   }
   if (act === "start-cam") { unlockVoice(); startCamHere(true); return; }
-  if (act === "stop-cam") { scanner.stop(); return; }
+  if (act === "stop-cam") {
+    state.camOff = true;
+    scanner.stop();
+    setScanLive("Cámara apagada.", false);
+    return;
+  }
   if (act === "enter") { enterApp(); return; }
   if (act === "install-app") { installApp(); return; }
   if (act === "scan-sup") { goScan("sup"); return; }
@@ -3511,9 +3556,15 @@ async function boot() {
     }
     if (document.visibilityState === "visible") {
       state.online = navigator.onLine;
-      if (scanner.active && (state.view === "home" || state.view === "supervisor") && !state.loggingIn) {
-        scanner.resume();
-        scanner.setBusy(!!state.isProcessing);
+      if ((state.view === "home" || state.view === "supervisor") && !state.camOff && !state.loggingIn) {
+        const video = document.getElementById("cam");
+        if (video && scanner.isLiveOn(video)) {
+          scanner.resume();
+          scanner.setBusy(!!state.isProcessing);
+          video.play().catch(() => {});
+        } else if (video) {
+          startCamHere();
+        }
       }
       store.restoreSesion().then(() => {
         if (state.view !== "welcome" && state.view !== "supervisor" && state.view !== "lock" && !supervisor()) {
@@ -3545,10 +3596,21 @@ async function boot() {
   ]);
 
   if ("serviceWorker" in navigator) {
-    try {
-      await navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" });
-    } catch { /* offline first run */ }
     watchAppUpdates();
+    const restKey = "qb_rest_" + CACHE_NAME;
+    const requestRest = () => {
+      try {
+        if (localStorage.getItem(restKey) === "1") return;
+      } catch { /* sigue */ }
+      navigator.serviceWorker.controller?.postMessage("WARM_REST");
+    };
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if (event.data !== "WARM_REST_OK") return;
+      try { localStorage.setItem(restKey, "1"); } catch { /* sigue */ }
+    });
+    navigator.serviceWorker.addEventListener("controllerchange", requestRest);
+    if (navigator.serviceWorker.controller) requestRest();
+    navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {});
   }
 
   const [cfg, sup] = await catalogs;
@@ -3595,9 +3657,10 @@ async function boot() {
     show(hash === "supervisor" ? "supervisor" : "welcome", { replace: true });
     if (state.view === "welcome" && !wasUpdating) speak("Bienvenido a Cocina Q Berries");
   }
-  startAutoSync(() => {
+  startAutoSync((summary) => {
     refreshPendPill();
     refreshHomeLock();
+    if (summary?.sent) notifyUploaded(summary.sent);
   });
   if (wasUpdating) hideUpdatingVeil();
 }

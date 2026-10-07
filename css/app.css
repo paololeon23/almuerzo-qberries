@@ -392,11 +392,9 @@ body.modal-open .emerg-fab {
   line-height: 1.35;
   color: var(--red);
 }
-.shell.is-locked .scan-wrap,
 .shell.is-locked .user-add,
 .shell.is-locked .mesa,
-.shell.is-locked .count-card,
-.shell.is-locked .cam-actions {
+.shell.is-locked .count-card {
   pointer-events: none;
   opacity: 0.42;
 }

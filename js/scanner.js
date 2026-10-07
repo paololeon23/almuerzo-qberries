@@ -215,6 +215,13 @@ export class FieldScanner {
         : (document.getElementById("cam") || videoEl);
       this.videoEl = target;
       this.stream = stream;
+      stream.getVideoTracks().forEach((track) => {
+        track.onended = () => {
+          if (this.stream !== stream || !this.active) return;
+          this.active = false;
+          if (typeof this.onEnded === "function") this.onEnded();
+        };
+      });
       target.srcObject = stream;
       target.muted = true;
       target.playsInline = true;

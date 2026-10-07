@@ -10,6 +10,7 @@ let watch = 0;
 let currentUtter = null;
 let speakGen = 0;
 let voicesReady = false;
+let keepAlive = 0;
 
 const FEMALE = /paulina|m[oó]nica|monica|luc[ií]a|pen[eé]lope|lupe|conchita|lola|salom[eé]|mar[ií]a|sof[ií]a|camila|isabela|dalia|fernanda|m[ií]a\b|paloma|rosa|carmen|laura|andrea|valentina|ximena|elena|ana\b|sabrina|isabel|carla|paola|female|femenin|mujer|woman/i;
 const MALE = /juan|diego|jorge|carlos|enrique|miguel|pablo|pedro|santiago|andr[eé]s|alberto|francisco|antonio|male|masculin|hombre|\bman\b/i;
@@ -95,18 +96,19 @@ export function unlockVoice() {
     if (s.paused) s.resume();
   } catch { /* iPhone */ }
   pickVoice();
-  if (unlocked) return;
+  if (unlocked) return false;
   unlocked = true;
-  if (isAppleTouch()) return;
+  if (isAppleTouch()) return false;
   try {
     const u = new SpeechSynthesisUtterance(" ");
-    currentUtter = u;
-    u.volume = 0.01;
-    u.rate = 2;
+    u.volume = 0;
+    u.rate = 1;
+    u.pitch = 1;
     u.lang = "es-PE";
     s.speak(u);
+    return true;
   } catch {
-    unlocked = true;
+    return false;
   }
 }
 
@@ -150,6 +152,11 @@ function pickVoice() {
   return cachedVoice;
 }
 
+function stopKeepAlive() {
+  window.clearInterval(keepAlive);
+  keepAlive = 0;
+}
+
 function finishPlay(gen) {
   if (gen !== speakGen) return;
   playing = false;
@@ -157,6 +164,7 @@ function finishPlay(gen) {
   currentUtter = null;
   onSpeak(false, "");
   window.clearTimeout(watch);
+  stopKeepAlive();
   // En Android, hablar otra frase al instante deletrea el texto letra por letra.
   const delay = isAppleTouch() ? 80 : 280;
   window.setTimeout(() => {
@@ -211,12 +219,15 @@ function playNext() {
   };
   u.onstart = () => {
     if (isAppleTouch()) return;
-    const eng = synth();
-    if (!eng) return;
-    try {
-      eng.pause();
-      eng.resume();
-    } catch { /* el motor ya está leyendo la frase completa */ }
+    stopKeepAlive();
+    keepAlive = window.setInterval(() => {
+      const eng = synth();
+      if (!eng || !eng.speaking) {
+        stopKeepAlive();
+        return;
+      }
+      try { eng.resume(); } catch { /* la frase sigue */ }
+    }, 5000);
   };
   u.onend = () => done();
   u.onerror = () => done();
@@ -236,6 +247,7 @@ function hardFlush() {
   speaking = false;
   currentUtter = null;
   window.clearTimeout(watch);
+  stopKeepAlive();
   const s = synth();
   try { s?.cancel(); } catch { /* ignore */ }
   try { if (s?.paused) s.resume(); } catch { /* iPhone */ }
@@ -253,15 +265,15 @@ export function speak(text, opts = {}) {
     if (!voiceEnabled()) { done(); return; }
     const phrase = prepareSpeakText(text, { nameOnly: false });
     if (!phrase) { done(); return; }
-    unlockVoice();
+    const justUnlocked = unlockVoice() === true;
     const s = synth();
     if (!s) { done(); return; }
     const job = { text: phrase, onDone: done };
-    if (opts.flush) {
+    if (!isAppleTouch() || opts.flush || justUnlocked) {
       hardFlush();
       queue.push(job);
       const gen = speakGen;
-      const delay = isAppleTouch() ? 120 : 320;
+      const delay = isAppleTouch() ? 120 : 360;
       window.setTimeout(() => {
         if (gen !== speakGen) { done(); return; }
         playNext();
@@ -285,13 +297,6 @@ export function speakPersonName(personOrText) {
   if (!name) return;
   try {
     if (!voiceEnabled()) return;
-    unlockVoice();
-    if (!synth()) return;
-    if (playing || speaking) {
-      queue.length = 0;
-      queue.push({ text: name, onDone: null });
-      return;
-    }
     speak(name);
   } catch {
     playing = false;
