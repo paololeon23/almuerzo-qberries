@@ -566,7 +566,7 @@ function fabBlock() {
       <button type="button" data-act="go-historial">Ver historial</button>
       <button type="button" data-act="go-dni">DNI guardados</button>
       <button type="button" data-act="go-perfil">Perfil</button>
-      <button type="button" data-act="do-update">Actualizar</button>
+      <button type="button" data-act="go-ajustes">Ajustes</button>
     </div>
     <button class="fab-options" id="fab-options-btn" type="button" data-act="toggle-fab" aria-label="Opciones rápidas" aria-expanded="false">
       ${ellipsisIcon()}
@@ -880,6 +880,68 @@ async function detectAppUpdate() {
     latest,
     newer: versionNewer(APP_VERSION, latest) || waiting,
   };
+}
+
+function showAjustesModal() {
+  closeFab();
+  const n = pendingCount();
+  openAlert(`<div class="modal-back" data-act="dismiss-alert">
+    <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
+      ${sectionHead("Ajustes", "Transferencia, caché y actualización.")}
+      <p class="app-ver" id="update-ver">Versión ${esc(APP_VERSION)}</p>
+      <p class="update-status" id="transfer-status">${n ? `${n} pendiente${n === 1 ? "" : "s"} en este celular.` : "No hay pendientes."}</p>
+      <div class="update-actions">
+        <button class="btn leaf" data-act="run-transfer" type="button">Modo transferencia</button>
+        <button class="btn leaf" data-act="clear-cache" type="button">Borrar caché</button>
+        <button class="btn leaf" data-act="reload-app" type="button">Actualizar</button>
+      </div>
+    </div>
+  </div>`);
+  detectAppUpdate().then((info) => {
+    const status = document.getElementById("transfer-status");
+    const ver = document.getElementById("update-ver");
+    if (!status || status.dataset.busy === "1") return;
+    if (info.newer) {
+      status.textContent = info.latest
+        ? `Hay una nueva: ${info.latest}. Pulse Actualizar.`
+        : "Hay una actualización. Pulse Actualizar.";
+      status.classList.add("new");
+      if (ver && info.latest) ver.textContent = `Esta app ${APP_VERSION} · Nueva ${info.latest}`;
+    }
+  }).catch(() => {});
+}
+
+async function runTransferMode() {
+  const status = document.getElementById("transfer-status");
+  const n = pendingCount();
+  if (!n) {
+    if (status) status.textContent = "No hay pendientes.";
+    speak("Nada por enviar", { flush: true });
+    return;
+  }
+  if (status) {
+    status.dataset.busy = "1";
+    status.textContent = "Enviando pendientes…";
+  }
+  try {
+    const sum = await flushNow({ notify: false });
+    refreshPendPill();
+    const left = pendingCount();
+    if (sum?.sent && !left) {
+      if (status) status.textContent = "Pendientes enviados.";
+      speak("Todo enviado", { flush: true });
+      return;
+    }
+    if (left) {
+      if (status) status.textContent = "Siguen guardados. Se envían al tener señal, también con la app cerrada en Android.";
+      speak("Quedó guardado. Se envía al tener señal.", { flush: true });
+      return;
+    }
+    if (status) status.textContent = "Listo.";
+  } catch {
+    if (status) status.textContent = "No se pudo ahora. Quedó guardado en este celular.";
+    armBackgroundSync();
+  }
 }
 
 function showUpdateModal() {
@@ -3236,6 +3298,8 @@ async function onClick(e) {
     return;
   }
   if (act === "go-perfil") { showPerfilModal(); return; }
+  if (act === "go-ajustes") { showAjustesModal(); return; }
+  if (act === "run-transfer") { runTransferMode(); return; }
   if (act === "do-update") { showUpdateModal(); return; }
   if (act === "reload-app") {
     runAppUpdate();

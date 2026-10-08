@@ -383,7 +383,8 @@ async function flushBody(onEach) {
   return { sent, pending: pendingRecords().length, duplicates, errors };
 }
 
-export function flushQueue(onEach) {
+export function flushQueue(onEach, opts = {}) {
+  const notify = opts.notify !== false;
   if (flushWait) {
     flushAgain = true;
     return flushWait;
@@ -397,7 +398,9 @@ export function flushQueue(onEach) {
   })();
   flushWait = run;
   return run.then((summary) => {
-    try { onFlushDone?.(summary); } catch { /* UI opcional */ }
+    if (notify) {
+      try { onFlushDone?.(summary); } catch { /* UI opcional */ }
+    }
     return summary;
   });
 }
@@ -418,11 +421,11 @@ function kickSync() {
   if (!retryTimer) flushQueue().catch(() => {});
 }
 
-export function flushNow() {
+export function flushNow(opts = {}) {
   preferPost = true;
   scheduleRetry(true);
   armBackgroundSync();
-  return flushQueue();
+  return flushQueue(null, opts);
 }
 
 export function startAutoSync(onDone) {
