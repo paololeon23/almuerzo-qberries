@@ -7,8 +7,8 @@
     "macroPartida": "COSTO DE COSECHA",
     "actividad": "SUPERVISOR DE COSECHA"
   },
-  "count": 91,
-  "updatedAt": "2026-10-08T12:17:00.000Z",
+  "count": 92,
+  "updatedAt": "2026-10-08T13:16:00.000Z",
   "byDni": {
     "18851808": {
       "nombre": "AGUIRRE NORIEGA MARCO ANTONIO",
@@ -641,6 +641,13 @@
     },
     "48462734": {
       "nombre": "RAZURI ARAMBULO MIGUEL FERNANDO",
+      "cargo": "AUXILIAR DE CAMPO",
+      "celular": "",
+      "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
+      "encargadoDni": "77795510"
+    },
+    "74968381": {
+      "nombre": "QUIROZ VEGA DARLIN JOEL",
       "cargo": "AUXILIAR DE CAMPO",
       "celular": "",
       "supervisorGlobal": "VERDE PINILLOS LUIS PABLITO",
