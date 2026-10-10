@@ -226,6 +226,7 @@ function supervisorNombreCompleto(s) {
 function mapTrabajador(row) {
   const dni = normalizeDni(row.dni || row.id);
   const parsed = nameParts({ nombreCompleto: row.nombre, apellido: row.apellido, nombre: row.nombre });
+  const sexo = String(row.sexo || "").toUpperCase();
   return {
     id: dni,
     dni,
@@ -234,7 +235,17 @@ function mapTrabajador(row) {
     nombreCompleto: parsed.nombreCompleto || String(row.nombre || "").trim(),
     cargo: row.cargo || "",
     area: row.cargo || row.area || "",
+    ...(sexo === "M" || sexo === "F" ? { sexo } : {}),
   };
+}
+
+function personSexo(person) {
+  const direct = String(person?.sexo || "").toUpperCase();
+  if (direct === "M" || direct === "F") return direct;
+  const key = normalizeDni(person?.dni || person?.id);
+  const official = key ? state.wrkByDni.get(key) : null;
+  const fromFile = String(official?.sexo || "").toUpperCase();
+  return fromFile === "M" || fromFile === "F" ? fromFile : "";
 }
 
 function mergePeople(fileList, localList) {
@@ -272,6 +283,7 @@ async function loadTrabajadores() {
   state.wrkByDni = map;
   state.workers = [...map.values()];
   state.oficial = map;
+  if (state.view === "home") refreshMesaUi();
 }
 
 function ensureWorkers() {
@@ -298,6 +310,7 @@ function personFromSaved(dni) {
     nombreCompleto: [p.apellido, p.nombre].filter(Boolean).join(" "),
     cargo: p.cargo || "Temporal",
     temporal: true,
+    ...(personSexo(p) ? { sexo: personSexo(p) } : {}),
   };
 }
 
@@ -987,6 +1000,7 @@ function rememberDni(person) {
     nombre: person.nombre || nameParts(person).nombre,
     cargo: person.cargo || person.area || "",
     temporal: !!person.temporal,
+    ...(personSexo(person) ? { sexo: personSexo(person) } : {}),
   });
 }
 
@@ -1036,6 +1050,7 @@ function showDniModal() {
     const sel = !!state.dniSelected[p.id];
     return `<button type="button" class="dni-row${sel ? " sel" : ""}" data-act="toggle-dni" data-id="${esc(p.id)}">
       <span class="dni-check${sel ? " on" : ""}" aria-hidden="true"></span>
+      ${avatarHtml(p, "sm")}
       <div>
         <b>${esc(p.apellido || "—")}</b>
         <div class="meta">DNI ${esc(p.dni || p.id)} · ${esc(p.nombre || "")}</div>
@@ -1076,6 +1091,20 @@ function showTempPersonModal() {
       <div class="field" id="fTempNom">
         <label>Nombre</label>
         <input id="tempNombre" autocomplete="off" placeholder="Apellidos y nombres" autocapitalize="characters">
+      </div>
+      <div class="field" id="fTempSexo">
+        <label>Avatar</label>
+        <div class="sexo-pick">
+          <button type="button" class="sexo-opt" data-act="pick-sexo" data-sexo="M">
+            <img src="./assets/hombre.png" alt="" width="72" height="72" decoding="async">
+            <span>Hombre</span>
+          </button>
+          <button type="button" class="sexo-opt" data-act="pick-sexo" data-sexo="F">
+            <img src="./assets/mujer.png" alt="" width="72" height="72" decoding="async">
+            <span>Mujer</span>
+          </button>
+        </div>
+        <span class="hint">Elija hombre o mujer.</span>
       </div>
       <div class="footer-actions" style="margin-top:8px">
         <button class="btn ghost" data-act="dismiss-alert" type="button">Cerrar</button>
@@ -1331,7 +1360,7 @@ function openAlert(html) {
 function showSummaryModal() {
   const mesa = getMesa();
   const meal = currentLote();
-  const n = mesa.length;
+  const n = mesaMealCount(mesa);
   const fundoOpts = fundos().map((name) => [name, name]);
   const comedorOpts = comedores().map((name) => [name, name]);
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
@@ -1662,6 +1691,14 @@ function forkIcon() {
   return `<span class="fork" aria-hidden="true"><svg viewBox="0 0 32 32" width="20" height="20"><path fill="currentColor" d="M8 3h2.1v8.4c0 .6.5 1.1 1.1 1.1s1.1-.5 1.1-1.1V3H14.4v8.4c0 .6.5 1.1 1.1 1.1s1.1-.5 1.1-1.1V3H18.8v8.6a4.7 4.7 0 0 1-3.7 4.6V29h-2.3V16.2A4.7 4.7 0 0 1 8 11.6V3z"/></svg></span>`;
 }
 
+function avatarHtml(person, size = "") {
+  const sex = personSexo(person);
+  const cls = `avatar${size ? ` ${size}` : ""}`;
+  if (sex !== "M" && sex !== "F") return `<span class="${cls} ph" aria-hidden="true"></span>`;
+  const src = sex === "F" ? "./assets/mujer.png" : "./assets/hombre.png";
+  return `<img class="${cls}" src="${src}" alt="" decoding="async" draggable="false">`;
+}
+
 function getMesa() {
   return store.getMesa();
 }
@@ -1673,7 +1710,8 @@ function setMesa(list) {
 function upsertMesa(person) {
   const id = normalizeDni(person.id || person.dni);
   if (!id) return;
-  const row = { ...person, id, dni: person.dni || id };
+  const prev = getMesa().find((p) => normalizeDni(p.id) === id);
+  const row = { ...person, id, dni: person.dni || id, menus: menuQty(prev) };
   setMesa([row, ...getMesa().filter((p) => normalizeDni(p.id) !== id)]);
 }
 
@@ -1746,6 +1784,7 @@ function supervisorAsMealPerson(person) {
     nombreCompleto: parsed.nombreCompleto || [apellido, nombre].filter(Boolean).join(" "),
     cargo: person.cargo || (person.emergencia ? "Supervisor de emergencia" : "Supervisor"),
     temporal: !!person.emergencia,
+    ...(personSexo(person) ? { sexo: personSexo(person) } : {}),
   };
 }
 
@@ -2028,6 +2067,38 @@ function mesaFindBox() {
   </label>`;
 }
 
+function menuQty(person) {
+  return Number(person?.menus) === 2 ? 2 : 1;
+}
+
+function mesaMealCount(mesa) {
+  if (state.extraOn) return mesa.length;
+  return mesa.reduce((sum, person) => sum + menuQty(person), 0);
+}
+
+function personLines(person) {
+  const ape = String(person?.apellido || "").trim();
+  const nom = String(person?.nombre || "").trim();
+  if (ape && nom) return { top: ape, bot: nom };
+  return { top: displayName(person) || person?.id || "", bot: "" };
+}
+
+function menuStepper(person) {
+  if (state.extraOn) return "";
+  const qty = menuQty(person);
+  return `<div class="menu-box">
+    <div class="menu-line">
+      <span class="menu-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M4 10.5V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.5M3 11h18M8 11V7.5A2.5 2.5 0 0 1 10.5 5h3A2.5 2.5 0 0 1 16 7.5V11"/></svg></span>
+      <span>Menús</span>
+      <div class="menu-step">
+        <button type="button" data-act="menu-minus" data-id="${esc(person.id)}" aria-label="Un menú" ${qty <= 1 ? "disabled" : ""}>−</button>
+        <b>${qty}</b>
+        <button type="button" class="plus" data-act="menu-plus" data-id="${esc(person.id)}" aria-label="Dos menús" ${qty >= 2 ? "disabled" : ""}>+</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function mesaRows(mesa) {
   const q = mesaFindDigits();
   const shown = mesaForList(mesa);
@@ -2041,14 +2112,19 @@ function mesaRows(mesa) {
   return rows.map((p) => {
     const st = p.status === "enviado" ? "Listo" : p.status === "pendiente" ? "Guardado" : "En lista";
     const kind = p.status === "enviado" ? "ok" : p.status === "pendiente" ? "wait" : "now";
+    const lines = personLines(p);
     return `<div class="person-row">
-      ${forkIcon()}
-      <div>
-        <b>${esc(displayName(p) || p.id)}</b>
-        <div class="meta">DNI ${esc(p.id)}${p.temporal ? " · Temporal" : ""}</div>
+      <div class="person-top">
+        ${avatarHtml(p)}
+        <div>
+          <b>${esc(lines.top)}</b>
+          ${lines.bot ? `<b class="person-name">${esc(lines.bot)}</b>` : ""}
+          <div class="meta">DNI ${esc(p.id)}${p.temporal ? " · Temporal" : ""}</div>
+        </div>
+        <span class="st ${kind}">${st}</span>
+        <button class="row-del" data-act="ask-drop-mesa" data-id="${esc(p.id)}" data-name="${esc(displayName(p))}" type="button" aria-label="Quitar ${esc(displayName(p) || p.id)}"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M6.2 5.1 5.1 6.2 10.9 12l-5.8 5.8 1.1 1.1L12 13.1l5.8 5.8 1.1-1.1L13.1 12l5.8-5.8-1.1-1.1L12 10.9 6.2 5.1z"/></svg></button>
       </div>
-      <span class="st ${kind}">${st}</span>
-      <button class="row-del" data-act="ask-drop-mesa" data-id="${esc(p.id)}" data-name="${esc(displayName(p))}" type="button" aria-label="Quitar ${esc(displayName(p) || p.id)}"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M6.2 5.1 5.1 6.2 10.9 12l-5.8 5.8 1.1 1.1L12 13.1l5.8 5.8 1.1-1.1L13.1 12l5.8-5.8-1.1-1.1L12 10.9 6.2 5.1z"/></svg></button>
+      ${menuStepper(p)}
     </div>`;
   }).join("");
 }
@@ -2272,19 +2348,25 @@ function showLoginGate(person) {
   requestAnimationFrame(tick);
 }
 
-function showScanHit({ dni = "—", nombre = "—", cargo = "—", ok = true, note = "", stateLabel = "" }) {
+function showScanHit({ dni = "—", nombre = "—", cargo = "—", ok = true, note = "", stateLabel = "", sexo = "" }) {
   const host = document.getElementById("scan-hit");
   if (host) {
     host.hidden = false;
     host.className = `hit-card ${ok ? "ok" : "bad"}`;
+    const face = avatarHtml({ dni, sexo }, "lg");
     host.innerHTML = `
       <div class="hit-top">
         <span class="hit-label">Identificación</span>
         <span class="hit-state">${esc(stateLabel || (ok ? "Confirmado" : "No autorizado"))}</span>
       </div>
-      <p class="hit-dni">DNI ${esc(dni)}</p>
-      <h3 class="hit-name">${esc(nombre || "—")}</h3>
-      <p class="hit-cargo">${esc(cargo || "—")}</p>
+      <div class="hit-person">
+        ${face}
+        <div>
+          <p class="hit-dni">DNI ${esc(dni)}</p>
+          <h3 class="hit-name">${esc(nombre || "—")}</h3>
+          <p class="hit-cargo">${esc(cargo || "—")}</p>
+        </div>
+      </div>
       ${note ? `<p class="hit-note">${esc(note)}</p>` : ""}`;
   }
   setScanLive(note || `DNI ${dni}`, ok);
@@ -2639,6 +2721,7 @@ function registerPerson(worker, { silent = false } = {}) {
       nombre: nameParts(worker).nombre || worker.nombreCompleto || worker.nombre,
       cargo: worker.cargo || worker.area || "",
       temporal: !!worker.temporal,
+      ...(personSexo(worker) ? { sexo: personSexo(worker) } : {}),
       status: "lista",
       plato: "",
     });
@@ -2772,6 +2855,7 @@ function completeWorkerScan(worker, dni, opId) {
   try {
     showScanHit({
       dni: worker.dni,
+      sexo: personSexo(worker),
       nombre: prepareSpeakName(worker) || twoApellidos(worker),
       cargo: [nameParts(worker).nombre, worker.cargo].filter(Boolean).join(" · "),
       ok: true,
@@ -2927,7 +3011,7 @@ async function sendLista() {
   const comida = currentLote();
   const existing = extra ? null : store.getCola().find((r) => r.type === "lista" && !r.payload?.extra && r.payload?.comida === comida);
   const sendId = extra ? uuid() : (existing?.payload?.send_id || existing?.payload?.lote_lista_id || uuid());
-  const n = mesa.length;
+  const n = mesaMealCount(mesa);
   const record = {
     clientId: extra ? `extra:${t.fecha}:${sendId}` : (existing?.clientId || `lista:${t.fecha}:${sendId}`),
     type: extra ? "extra" : "lista",
@@ -2952,6 +3036,7 @@ async function sendLista() {
         apellido: p.apellido || "",
         nombre: p.nombre || "",
         area: p.cargo || p.area || "",
+        menus: extra ? 1 : menuQty(p),
       })),
     },
     createdAt: extra ? Date.now() : (existing?.createdAt || Date.now()),
@@ -3143,6 +3228,19 @@ async function onClick(e) {
       if (!n) return;
       if (!navigator.onLine) speak("Se envía cuando vuelva la señal.", { flush: true });
     }).catch(() => refreshPendPill());
+    return;
+  }
+  if (act === "menu-plus" || act === "menu-minus") {
+    if (state.extraOn || isSendLocked()) return;
+    const id = normalizeDni(btn.dataset.id);
+    if (!id) return;
+    setMesa(getMesa().map((p) => {
+      if (normalizeDni(p.id) !== id) return p;
+      const qty = menuQty(p);
+      const next = act === "menu-plus" ? Math.min(2, qty + 1) : Math.max(1, qty - 1);
+      return { ...p, menus: next };
+    }));
+    refreshMesaUi();
     return;
   }
   if (act === "start-cam") { unlockVoice(); startCamHere(true); return; }
@@ -3374,26 +3472,42 @@ async function onClick(e) {
     showTempPersonModal();
     return;
   }
+  if (act === "pick-sexo") {
+    const box = btn.closest(".sexo-pick");
+    box?.querySelectorAll(".sexo-opt").forEach((el) => {
+      const on = el === btn;
+      el.classList.toggle("on", on);
+      el.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    document.getElementById("fTempSexo")?.classList.remove("bad");
+    return;
+  }
   if (act === "save-temp-person") {
     const dni = normalizeDni(document.getElementById("tempDni")?.value || "");
     const nombre = String(document.getElementById("tempNombre")?.value || "").replace(/\s+/g, " ").trim();
+    const picked = document.querySelector(".sexo-opt.on")?.dataset.sexo || "";
+    const official = /^\d{8}$/.test(dni) ? findOfficial(dni) : null;
+    const sexo = personSexo(official) || (picked === "M" || picked === "F" ? picked : "");
     document.getElementById("fTempDni")?.classList.toggle("bad", !/^\d{8}$/.test(dni));
     document.getElementById("fTempNom")?.classList.toggle("bad", !nombre);
-    if (!/^\d{8}$/.test(dni) || !nombre) {
-      speak("Falta DNI o nombre.");
+    document.getElementById("fTempSexo")?.classList.toggle("bad", !sexo);
+    if (!/^\d{8}$/.test(dni) || !nombre || !sexo) {
+      speak(!sexo && dni && nombre ? "Elija hombre o mujer." : "Falta DNI o nombre.");
       return;
     }
-    const official = findOfficial(dni);
     const parsed = nameParts({ nombreCompleto: nombre });
-    const worker = official || {
-      dni,
-      id: dni,
-      apellido: parsed.apellido,
-      nombre: parsed.nombre,
-      nombreCompleto: parsed.nombreCompleto,
-      cargo: "Temporal",
-      temporal: true,
-    };
+    const worker = official
+      ? { ...official, sexo: personSexo(official) || sexo }
+      : {
+        dni,
+        id: dni,
+        apellido: parsed.apellido,
+        nombre: parsed.nombre,
+        nombreCompleto: parsed.nombreCompleto,
+        cargo: "Temporal",
+        temporal: true,
+        sexo,
+      };
     const { already } = registerPerson(worker);
     dismissAlert();
     refreshMesaUi();

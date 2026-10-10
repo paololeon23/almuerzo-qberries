@@ -1,4 +1,4 @@
-const CACHE_NAME = "cocina-qb-v231";
+const CACHE_NAME = "cocina-qb-v238";
 
 const SHELL = [
   "./",
@@ -24,6 +24,8 @@ const LATER = [
   "./js/vendor/jsqr.js",
   "./data/trabajadores.json",
   "./icons/icon-512.png",
+  "./assets/hombre.png",
+  "./assets/mujer.png",
 ];
 
 const PRECACHE = SHELL.concat(LATER);
@@ -271,7 +273,7 @@ async function flushClosedApp() {
             type: record.type,
             clientId: record.clientId,
             payload: record.payload || {},
-            clientVersion: "1.3.71",
+            clientVersion: "1.3.78",
           }),
           cache: "no-store",
           signal: ctrl.signal,

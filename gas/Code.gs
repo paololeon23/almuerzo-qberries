@@ -59,7 +59,8 @@ var COLS_TRABAJADORES = [
   "lote_campo",
   "modulo",
   "turno_campo",
-  "status"
+  "status",
+  "comidas"
 ];
 
 var COLS_SUPERVISORES = [
@@ -338,8 +339,9 @@ function workerSave(body) {
 
     var packT = ensurePersonSheet(ss, "Trabajadores");
     var packS = ensureSupervisorSheet(ss);
+    var written = 0;
     if (people.length) {
-      writePeople(packT, people, {
+      written = writePeople(packT, people, {
         fecha: fecha,
         hora: horaG,
         sid: sid,
@@ -352,8 +354,9 @@ function workerSave(body) {
         turno_campo: turnoCampo,
         extra: false,
         status: "confirmed"
-      });
+      }) || 0;
     }
+    if (written) n = written;
     appendSupervisor(packS, {
       fecha: fecha,
       hora: horaG,
@@ -375,7 +378,7 @@ function workerSave(body) {
       ok: true,
       saved: true,
       duplicate: false,
-      trabajadores: people.length,
+      trabajadores: n,
       total: totalL
     });
   } catch (err) {
@@ -601,7 +604,7 @@ function patchSheetRows(pack, fecha, sid, dni, patch, peopleSheet) {
 
 function listReservas(desde, hasta) {
   var cache = CacheService.getScriptCache();
-  var key = "rsv:" + desde + ":" + hasta;
+  var key = "rsv3:" + desde + ":" + hasta;
   var hit = cache.get(key);
   if (hit) {
     try { return JSON.parse(hit); } catch (e) { /* sigue */ }
@@ -658,7 +661,8 @@ function readSheetReservas(pack, fromExtra, desde, hasta) {
       etapa: fundo,
       extra: extra,
       tipo: extra ? "extra" : "lista",
-      status: status
+      status: status,
+      comidas: Number(val(pack, row, "comidas")) === 2 ? 2 : 1
     });
   }
   return out;
@@ -675,11 +679,18 @@ function dedupeActivas(list) {
     }
     var normal = !r.extra;
     var key = r.dni + "|" + r.date + "|" + (normal ? "normal" : "extra");
-    if (seen[key]) continue;
-    seen[key] = true;
+    var copies = Number(r.comidas) === 2 ? 2 : 1;
+    if (seen[key]) {
+      var prev = seen[key];
+      if (Number(r.comidas) === 2 || Number(prev.comidas) === 2) prev.comidas = 2;
+      else prev.comidas = Math.min(2, (Number(prev.comidas) || 1) + 1);
+      continue;
+    }
     r = copyRsv(r);
     r.extra = !normal;
     r.tipo = normal ? "lista" : "extra";
+    r.comidas = copies;
+    seen[key] = r;
     out.push(r);
   }
   return out;
@@ -702,7 +713,8 @@ function copyRsv(r) {
     etapa: r.etapa || r.fundo || "",
     extra: !!r.extra,
     tipo: r.extra ? "extra" : "lista",
-    status: r.status
+    status: r.status,
+    comidas: Number(r.comidas) === 2 ? 2 : 1
   };
 }
 
@@ -821,11 +833,20 @@ function supervisorSentInPeople(pack, sid, fecha) {
   return false;
 }
 
+function menuCopies(person, extra) {
+  if (extra) return 1;
+  var n = Number(person && (person.menus || person.cantidad));
+  return n === 2 ? 2 : 1;
+}
+
 function writePeople(pack, people, meta) {
   var rows = [];
+  var extra = meta.extra === true;
   for (var i = 0; i < people.length; i++) {
     var w = people[i] || {};
     var parts = personNameParts(w);
+    var copies = menuCopies(w, extra);
+    for (var c = 0; c < copies; c++) {
     rows.push(reservaRow(pack, {
       fecha: meta.fecha,
       hora: meta.hora,
@@ -840,11 +861,14 @@ function writePeople(pack, people, meta) {
       lote_campo: meta.lote_campo,
       modulo: meta.modulo,
       turno_campo: meta.turno_campo,
-      status: meta.status || "confirmed"
+      status: meta.status || "confirmed",
+      comidas: copies
     }));
+    }
   }
-  if (!rows.length) return;
+  if (!rows.length) return 0;
   pack.sh.getRange(pack.sh.getLastRow() + 1, 1, rows.length, pack.width).setValues(rows);
+  return rows.length;
 }
 
 function appendReserva(pack, rec) {
@@ -1006,6 +1030,7 @@ function reservaRow(pack, rec) {
   setCol(pack, row, "modulo", rec.modulo);
   setCol(pack, row, "turno_campo", rec.turno_campo);
   setCol(pack, row, "status", rec.status || "confirmed");
+  setCol(pack, row, "comidas", rec.comidas === 2 ? 2 : 1);
   return row;
 }
 

@@ -403,6 +403,7 @@ export const store = {
       nombre: person.nombre || "",
       cargo: person.cargo || person.area || "",
       temporal: !!person.temporal,
+      ...(person.sexo === "M" || person.sexo === "F" ? { sexo: person.sexo } : {}),
       savedAt: Date.now(),
     });
     write(STORAGE_KEYS.dniGuardados, list.slice(0, 200));
