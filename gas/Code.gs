@@ -857,7 +857,6 @@ function supervisorSentInPeople(pack, sid, fecha) {
 }
 
 function menuCopies(person, extra) {
-  if (extra) return 1;
   var n = Number(person && (person.menus || person.cantidad));
   return n === 2 ? 2 : 1;
 }

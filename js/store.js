@@ -418,7 +418,10 @@ export const store = {
   getMesa() {
     const raw = read(STORAGE_KEYS.mesa, []);
     if (!Array.isArray(raw)) return [];
-    return raw.filter((p) => p && p.id);
+    const day = todayKey(TZ);
+    const list = raw.filter((p) => p && p.id && String(p.fecha || "") === day);
+    if (list.length !== raw.filter((p) => p && p.id).length) persistList(STORAGE_KEYS.mesa, list);
+    return list;
   },
   setMesa(list) {
     const day = todayKey(TZ);

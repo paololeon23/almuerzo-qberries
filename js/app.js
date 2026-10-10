@@ -2072,7 +2072,6 @@ function menuQty(person) {
 }
 
 function mesaMealCount(mesa) {
-  if (state.extraOn) return mesa.length;
   return mesa.reduce((sum, person) => sum + menuQty(person), 0);
 }
 
@@ -2084,7 +2083,6 @@ function personLines(person) {
 }
 
 function menuStepper(person) {
-  if (state.extraOn) return "";
   const qty = menuQty(person);
   return `<div class="menu-box">
     <div class="menu-line">
@@ -3036,7 +3034,7 @@ async function sendLista() {
         apellido: p.apellido || "",
         nombre: p.nombre || "",
         area: p.cargo || p.area || "",
-        menus: extra ? 1 : menuQty(p),
+        menus: menuQty(p),
       })),
     },
     createdAt: extra ? Date.now() : (existing?.createdAt || Date.now()),
@@ -3231,7 +3229,7 @@ async function onClick(e) {
     return;
   }
   if (act === "menu-plus" || act === "menu-minus") {
-    if (state.extraOn || isSendLocked()) return;
+    if (isSendLocked() && !state.extraOn) return;
     const id = normalizeDni(btn.dataset.id);
     if (!id) return;
     setMesa(getMesa().map((p) => {
