@@ -148,6 +148,27 @@ function doGet(e) {
   });
 }
 
+var PANEL_PASSWORD = "Qberrie$2026";
+
+function panelPasswordOk(given) {
+  var a = String(given == null ? "" : given);
+  var b = String(PANEL_PASSWORD);
+  var n = Math.max(a.length, b.length);
+  var diff = a.length === b.length ? 0 : 1;
+  var i;
+  for (i = 0; i < n; i++) {
+    var ca = i < a.length ? a.charCodeAt(i) : 0;
+    var cb = i < b.length ? b.charCodeAt(i) : 0;
+    diff = diff | (ca ^ cb);
+  }
+  return diff === 0 && a.length > 0;
+}
+
+function panelLogin(body) {
+  if (panelPasswordOk(body && (body.password || body.clave))) return jsonOut({ ok: true });
+  return jsonOut({ ok: false, error: "clave_invalida" });
+}
+
 function doPost(e) {
   var raw = (e && e.postData && e.postData.contents) ? String(e.postData.contents) : "";
   var body = {};
@@ -157,11 +178,13 @@ function doPost(e) {
     return jsonOut({ ok: false, error: "json_invalido" });
   }
 
+  var action = String(body.action || body.accion || "").toLowerCase();
+  if (action === "login") return panelLogin(body);
+
   if (isWorkerPayload(body)) {
     return workerSave(body);
   }
 
-  var action = String(body.action || body.accion || "").toLowerCase();
   if (action === "quitar" || action === "cancel" || action === "cancelar" || body.quitar === true) {
     return adminQuitar(body);
   }
