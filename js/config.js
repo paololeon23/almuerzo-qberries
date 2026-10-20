@@ -1,5 +1,5 @@
-export const APP_VERSION = "1.3.92";
-export const CACHE_NAME = "cocina-qb-v252";
+export const APP_VERSION = "1.3.94";
+export const CACHE_NAME = "cocina-qb-v254";
 export const APP_ASSETS = [
   "./",
   "./index.html",

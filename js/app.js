@@ -677,6 +677,77 @@ function histCantidad(r) {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
+function etapaCopyLabel(fundo) {
+  const text = String(fundo || "").trim().toUpperCase();
+  const roman = text.match(/\b(III|II|IV|I|V)\b/);
+  if (roman) return roman[1];
+  const num = text.match(/(\d+)/);
+  return num ? num[1] : (text || "—");
+}
+
+function comedorCopyLabel(name) {
+  const m = String(name || "").match(/(\d+)/);
+  return m ? m[1] : (String(name || "").trim() || "—");
+}
+
+function buildHistCopyText() {
+  const s = supervisor();
+  const who = supervisorNombreCompleto(s) || displayName(s) || twoApellidos(s) || "—";
+  const groups = new Map();
+  for (const r of historialConfirmados()) {
+    const p = r.payload || {};
+    const etapa = etapaCopyLabel(p.fundo || p.etapa);
+    const comedor = comedorCopyLabel(p.comedor);
+    const key = `${etapa}\t${comedor}`;
+    groups.set(key, (groups.get(key) || 0) + histCantidad(r));
+  }
+  const lines = [`SUPERVISOR : ${who}`, "----------------------------------"];
+  let total = 0;
+  const ordered = [...groups.entries()].sort((a, b) => {
+    const [ea, ca] = a[0].split("\t");
+    const [eb, cb] = b[0].split("\t");
+    const ra = ea.length - eb.length || ea.localeCompare(eb);
+    if (ra) return ra;
+    return Number(ca) - Number(cb) || ca.localeCompare(cb);
+  });
+  for (const [key, cant] of ordered) {
+    const [etapa, comedor] = key.split("\t");
+    lines.push(`ETAPA : ${etapa}`);
+    lines.push(`COMEDOR : ${comedor}`);
+    lines.push(`CANTIDAD: ${cant}`);
+    lines.push("---------------------------------");
+    total += cant;
+  }
+  if (!ordered.length) {
+    lines.push("Sin envíos en este celular.");
+    lines.push("---------------------------------");
+  }
+  lines.push(`TOTAL : ${total}`);
+  return lines.join("\n");
+}
+
+async function copyTextPlain(text) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch { /* fallback abajo */ }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.cssText = "position:fixed;left:-9999px;top:0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 function showHistorialModal() {
   closeFab();
   const recs = historialConfirmados();
@@ -719,7 +790,10 @@ function showHistorialModal() {
       ${sectionHead("Historial", "Cada envío de este celular. Se borra a las 12 horas.")}
       <div class="hist-list">${rows}</div>
       ${pagerHtml(state.histPage, pages, "hist-page-prev", "hist-page-next")}
-      <button class="btn ghost" data-act="dismiss-alert" type="button">Cerrar</button>
+      <div class="footer-actions">
+        <button class="btn ghost" data-act="dismiss-alert" type="button">Cerrar</button>
+        <button class="btn leaf" data-act="copy-hist-info" type="button"${recs.length ? "" : " disabled"}>Copiar información</button>
+      </div>
     </div>
   </div>`);
 }
@@ -2117,10 +2191,10 @@ function supervisorView() {
         ${scanHelp()}
       </section>
     </div>
-    <div class="emerg-dock">
-      <button class="emerg-fab${emerg ? " on" : ""}" data-act="add-emergency-sup" type="button" aria-label="Entrar como usuario">${userIcon()}<b>Usuario</b></button>
-    </div>
+    <div class="emerg-dock"></div>
   </div>`);
+  // Pausado: botón Usuario (emerg-fab / add-emergency-sup). Para reactivar, poner dentro de emerg-dock:
+  // <button class="emerg-fab${emerg ? " on" : ""}" data-act="add-emergency-sup" type="button" aria-label="Entrar como usuario">${userIcon()}<b>Usuario</b></button>
   startCamHere();
 }
 
@@ -3462,6 +3536,19 @@ async function onClick(e) {
     state.histPeoplePage = 1;
     state.histPeopleQuery = "";
     showHistorialModal();
+    return;
+  }
+  if (act === "copy-hist-info") {
+    const text = buildHistCopyText();
+    copyTextPlain(text).then((ok) => {
+      if (ok) {
+        speak("Información copiada", { flush: true });
+        showScanToast("Información copiada.");
+      } else {
+        speak("No se pudo copiar", { flush: true });
+        showAlert("No se copió", "El celular no dejó copiar. Intente de nuevo.");
+      }
+    });
     return;
   }
   if (act === "toggle-hist") {
