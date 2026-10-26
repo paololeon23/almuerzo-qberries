@@ -677,6 +677,86 @@ function histCantidad(r) {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
+function histById(id) {
+  const key = String(id || "");
+  if (!key) return null;
+  return historialConfirmados().find((r) => histRecordId(r) === key) || null;
+}
+
+function histPdfModel(r) {
+  const p = r?.payload || {};
+  const extra = r?.type === "extra" || p.extra === true;
+  const s = supervisor();
+  const people = histPersonas(r).map((person, i) => ({
+    n: i + 1,
+    dni: person.dni || person.id || "—",
+    nombre: displayName(person) || [person.apellido, person.nombre].filter(Boolean).join(" ") || "—",
+    menus: menuQty(person),
+  }));
+  return {
+    supervisor: p.supervisor_apellido_nombre || supervisorNombreCompleto(s) || displayName(s) || "—",
+    supervisorDni: p.supervisor_id || s?.dni || s?.id || "—",
+    fecha: histFecha(p.fecha_local),
+    fechaIso: p.fecha_local || "",
+    hora: horaMinutos(p.hora_local) || "—",
+    comida: p.comida || "Almuerzo",
+    fundo: p.fundo || p.etapa || "—",
+    etapa: etapaCopyLabel(p.fundo || p.etapa),
+    comedor: p.comedor || "—",
+    comedorN: comedorCopyLabel(p.comedor),
+    cantidad: histCantidad(r),
+    tipo: extra ? "Extra" : "Lista",
+    estado: r?.pending ? "Pendiente" : "Enviado",
+    people,
+  };
+}
+
+async function shareHistPdf(id) {
+  const rec = histById(id);
+  if (!rec) {
+    speak("No hay envío", { flush: true });
+    return;
+  }
+  const model = histPdfModel(rec);
+  const mod = await import("./pdf.js");
+  const blob = mod.histPdfBlob(model);
+  const name = mod.histPdfFileName(model);
+  const text = mod.histShareText(model);
+  const file = new File([blob], name, { type: "application/pdf" });
+  try {
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: "Q BERRIES", text });
+      speak("PDF listo", { flush: true });
+      return;
+    }
+  } catch (err) {
+    if (String(err?.name || "") === "AbortError") return;
+  }
+  const url = URL.createObjectURL(blob);
+  try {
+    const opened = window.open(url, "_blank");
+    if (!opened) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      a.rel = "noopener";
+      a.click();
+    }
+  } catch { /* el texto igual se puede compartir */ }
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: "Q BERRIES", text });
+      speak("PDF listo", { flush: true });
+      return;
+    }
+  } catch (err) {
+    if (String(err?.name || "") === "AbortError") return;
+  }
+  const copied = await copyTextPlain(text);
+  speak(copied ? "PDF guardado. Texto copiado." : "PDF listo", { flush: true });
+  showScanToast(copied ? "PDF listo. Texto copiado." : "PDF listo.");
+}
+
 function etapaCopyLabel(fundo) {
   const text = String(fundo || "").trim().toUpperCase();
   const roman = text.match(/\b(III|II|IV|I|V)\b/);
@@ -761,7 +841,6 @@ function showHistorialModal() {
     const p = r.payload || {};
     const n = histCantidad(r);
     const hora = horaMinutos(p.hora_local) || "—";
-    const comida = p.comida || "Almuerzo";
     const donde = [p.fundo || p.etapa, p.comedor].filter(Boolean).join(" · ") || "—";
     const id = histRecordId(r);
     const open = openId === id;
@@ -769,25 +848,25 @@ function showHistorialModal() {
     const badge = r.pending ? "Pendiente" : (extra ? "Extra" : "Lista");
     const badgeClass = r.pending ? "now" : "ok";
     return `<div class="hist-item${open ? " open" : ""}">
-      <button type="button" class="hist-row" data-act="toggle-hist" data-id="${esc(id)}" aria-expanded="${open ? "true" : "false"}">
+      <div class="hist-row" data-act="toggle-hist" data-id="${esc(id)}" role="button" aria-expanded="${open ? "true" : "false"}">
         <div>
           <div class="hist-sum">
             <span><small>Fecha</small><b>${esc(histFecha(p.fecha_local))}</b></span>
             <span><small>Hora</small><b>${esc(hora)}</b></span>
             <span><small>Cant.</small><b>${n}</b></span>
-            <span><small>Comida</small><b>${esc(comida)}</b></span>
           </div>
           <div class="meta">${esc(donde)}</div>
         </div>
+        <button class="hist-pdf-btn" type="button" data-act="share-hist-pdf" data-id="${esc(id)}" aria-label="PDF y WhatsApp">PDF</button>
         <span class="st ${badgeClass}">${esc(badge)}</span>
         <span class="hist-chev" aria-hidden="true">${open ? "▾" : "▸"}</span>
-      </button>
+      </div>
       ${open ? histPeopleBlock(r) : ""}
     </div>`;
   }).join("") || `<p class="sub">Aún no hay envíos guardados en este celular.</p>`;
   openAlert(`<div class="modal-back" data-act="dismiss-alert">
     <div class="modal summary-modal" role="dialog" aria-modal="true" data-act="stay">
-      ${sectionHead("Historial", "Cada envío de este celular. Se borra a las 12 horas.")}
+      ${sectionHead("Historial", "Cada envío de este celular. Se borra a las 24 horas.")}
       <div class="hist-list">${rows}</div>
       ${pagerHtml(state.histPage, pages, "hist-page-prev", "hist-page-next")}
       <div class="footer-actions">
@@ -796,6 +875,14 @@ function showHistorialModal() {
       </div>
     </div>
   </div>`);
+}
+
+function historialIsOpen() {
+  return !!document.querySelector("#alert-host .hist-list");
+}
+
+function refreshHistorialIfOpen() {
+  if (historialIsOpen()) showHistorialModal();
 }
 
 function focusHistSearch() {
@@ -3240,7 +3327,14 @@ function sendLista() {
   }
   const t = nowParts(TZ);
   const comida = currentLote();
-  const existing = extra ? null : store.getCola().find((r) => r.type === "lista" && !r.payload?.extra && r.payload?.comida === comida);
+  const sid = postDni(s.dni || s.id);
+  const existing = extra ? null : store.getCola().find((r) => (
+    r.type === "lista"
+    && !r.payload?.extra
+    && r.payload?.comida === comida
+    && r.payload?.fecha_local === t.fecha
+    && postDni(r.payload?.supervisor_id) === sid
+  ));
   const sendId = extra ? uuid() : (existing?.payload?.send_id || existing?.payload?.lote_lista_id || uuid());
   const n = mesaMealCount(people);
   const record = {
@@ -3436,7 +3530,7 @@ async function onClick(e) {
     e.stopPropagation();
     return;
   }
-  const once = ["send-lista", "reload-app", "clear-cache", "logout", "drop-mesa", "save-temp-person", "save-emergency-name", "keep-sup-lunch", "drop-sup-lunch", "add-emergency-sup", "confirm-emergency", "enter", "open-dni-login", "submit-dni-login"];
+  const once = ["send-lista", "reload-app", "clear-cache", "logout", "drop-mesa", "save-temp-person", "save-emergency-name", "keep-sup-lunch", "drop-sup-lunch", "add-emergency-sup", "confirm-emergency", "enter", "open-dni-login", "submit-dni-login", "share-hist-pdf"];
   if (once.includes(act)) {
     if (tapLock) return;
     tapLock = true;
@@ -3468,6 +3562,7 @@ async function onClick(e) {
     const n = pendingCount();
     flushNow().then((s) => {
       refreshPendPill();
+      refreshHistorialIfOpen();
       if (n > 0 && pendingCount() === 0 && ((s?.sent || 0) + (s?.duplicates || 0)) > 0) {
         const done = store.getHistorial().filter((r) => beforeIds.includes(r.clientId));
         releaseMesaAfterSend(done);
@@ -3536,6 +3631,14 @@ async function onClick(e) {
     state.histPeoplePage = 1;
     state.histPeopleQuery = "";
     showHistorialModal();
+    if (pendingCount() && navigator.onLine) flushQueue().catch(() => {});
+    return;
+  }
+  if (act === "share-hist-pdf") {
+    e.stopPropagation();
+    shareHistPdf(btn.dataset.id).catch(() => {
+      speak("No se pudo armar el PDF", { flush: true });
+    });
     return;
   }
   if (act === "copy-hist-info") {
@@ -4023,6 +4126,7 @@ async function boot() {
       if (s?.duplicates) speak("Hoy ya envió. Solo extra.");
       else if (s?.sent) speak("Enviado");
       refreshPendPill();
+      refreshHistorialIfOpen();
       if (n > 0 && pendingCount() === 0 && ((s?.sent || 0) + (s?.duplicates || 0)) > 0) {
         releaseMesaAfterSend(store.getHistorial().filter((r) => beforeIds.includes(r.clientId)));
       }
@@ -4154,6 +4258,7 @@ async function boot() {
     refreshPendPill();
     releaseQueueScreen(summary);
     refreshHomeLock();
+    refreshHistorialIfOpen();
     if (summary?.sent) notifyUploaded(summary.sent);
   });
   if (wasUpdating) hideUpdatingVeil();

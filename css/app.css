@@ -2188,8 +2188,9 @@ body.modal-open .emerg-fab {
 }
 .hist-sum {
   display: grid;
-  grid-template-columns: 1.35fr 0.7fr 0.55fr 1fr;
+  grid-template-columns: 1.35fr 0.7fr 0.55fr;
   gap: 4px 8px;
+  align-items: end;
 }
 .hist-sum small {
   display: block;
@@ -2204,7 +2205,25 @@ body.modal-open .emerg-fab {
   font-weight: 800;
   color: #1f3d2a;
 }
-.hist-row .st { flex: 0 0 auto; }
+.hist-pdf-btn,
+.hist-row .st {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.hist-pdf-btn {
+  background: #3f8736;
+  color: #fff;
+}
 .hist-chev {
   flex: 0 0 auto;
   width: 16px;

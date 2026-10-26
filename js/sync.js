@@ -29,15 +29,16 @@ export function isSlowLink() {
   if (!conn) return false;
   const effective = String(conn.effectiveType || "").toLowerCase();
   if (SLOW_TYPES.has(effective)) return true;
+  if (effective === "h+" || effective === "hspa" || effective === "hspa+") return true;
   if (conn.saveData === true) return true;
   const down = Number(conn.downlink);
-  if (Number.isFinite(down) && down > 0 && down <= 0.5) return true;
+  if (Number.isFinite(down) && down > 0 && down <= 0.7) return true;
   const rtt = Number(conn.rtt);
   if (!Number.isFinite(rtt)) return false;
   if (effective !== "4g" && rtt >= 400) return true;
   // H+ suele anunciarse como 4g. Con ese RTT un ping previo se come la ventana.
-  if (effective === "4g" && rtt >= 200) return true;
-  if (effective === "4g" && Number.isFinite(down) && down > 0 && down < 1.5) return true;
+  if (effective === "4g" && rtt >= 150) return true;
+  if (effective === "4g" && Number.isFinite(down) && down > 0 && down < 2) return true;
   return false;
 }
 
@@ -214,6 +215,7 @@ async function deliverRecord(record, url) {
     payload: stamped.payload,
     clientVersion: APP_VERSION,
   });
+  const waitMs = isSlowLink() ? 60000 : POST_TIMEOUT_MS;
   const res = await fetchText(u, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -221,7 +223,7 @@ async function deliverRecord(record, url) {
     cache: "no-store",
     credentials: "omit",
     referrerPolicy: "no-referrer",
-  }, POST_TIMEOUT_MS);
+  }, waitMs);
   if (!res.ok) throw new Error(`http_${res.status}`);
   const text = await res.text();
   let json;
@@ -322,12 +324,7 @@ async function flushPass(onEach) {
     summary.skippedOffline = true;
     return summary;
   }
-  const direct = preferPost;
   preferPost = false;
-  if (!direct && !isSlowLink()) {
-    const probe = await probeServer();
-    if (probe === "down") return summary;
-  }
   const ordered = [...pendingRecords()].sort((a, b) => {
     const rank = flushRank(a) - flushRank(b);
     if (rank) return rank;

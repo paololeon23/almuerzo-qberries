@@ -38,7 +38,7 @@
  */
 
 var CACHE_TTL_SEC = 21600;
-var APP_VERSION = "1.4.4";
+var APP_VERSION = "1.4.5";
 var TZ = "America/Lima";
 
 var FUNDOS = ["LICAPA I", "LICAPA II", "LICAPA III"];
@@ -262,9 +262,7 @@ function workerSave(body) {
     if (people.length > 400) people = people.slice(0, 400);
     var n = people.length ? people.length : Number(p.trabajadores_unicos) || 0;
     var horaG = cell(p.hora_local, 20);
-    var fechaHoy = limaFecha();
-    var fechaIn = String(p.fecha_local || "").slice(0, 10);
-    var fecha = fechaIn === fechaHoy ? fechaIn : fechaHoy;
+    var fecha = fechaDelPedido(p.fecha_local);
     var sid = onlyDni(p.supervisor_id || "");
     if (!/^\d{8}$/.test(sid)) {
       return jsonOut({ ok: false, error: "sesion_invalida" });
@@ -1473,6 +1471,15 @@ function dateRangeFromQuery(q) {
 
 function limaFecha() {
   return Utilities.formatDate(new Date(), TZ, "yyyy-MM-dd");
+}
+
+function fechaDelPedido(raw) {
+  var hoy = limaFecha();
+  var inDate = String(raw || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(inDate)) return hoy;
+  if (inDate === hoy) return inDate;
+  if (inDate === addDays(hoy, -1) || inDate === addDays(hoy, -2)) return inDate;
+  return hoy;
 }
 
 function limaHora() {
