@@ -32177,5 +32177,12 @@
         "sexo": "F",
         "cargo": "COSECHA",
         "fechaIngreso": "13/10/2026"
+    },
+    {
+        "dni": "12345678",
+        "nombre": "PRUEBA ALZA",
+        "sexo": "M",
+        "cargo": "SUPERVISOR DE COSECHA",
+        "fechaIngreso": "27/10/2026"
     }
 ]
