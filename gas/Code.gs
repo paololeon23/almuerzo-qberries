@@ -74,7 +74,7 @@ var PACK_MEMO = {};
 
 var COMEDORES = [
   "Comedor 1", "Comedor 2", "Comedor 3", "Comedor 4", "Comedor 5",
-  "Galpon", "Oficina Tecnica", "Comedor Administrativo",
+  "Galpon", "Oficina Tecnica", "Comedor Administrativo", "Comedor de Inducción",
   "Comedor 6", "Comedor 7", "Comedor 8", "Comedor 9", "Comedor 10",
   "Comedor Principal - II",
   "Comedor 11"
@@ -1573,6 +1573,7 @@ function canonSede(raw) {
   if (f === "garita 1" || f === "garita1") return "Garita 1";
   if (f === "garita 2" || f === "garita2") return "Garita 2";
   if (f === "administrativo" || f === "comedor administrativo") return "Comedor Administrativo";
+  if (f === "induccion" || f === "comedor de induccion" || f === "comedor induccion") return "Comedor de Inducción";
   var m = f.match(/^comedor (\d{1,2})$/);
   if (m) {
     var num = Number(m[1]);

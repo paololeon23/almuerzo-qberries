@@ -1405,6 +1405,7 @@ const COMEDORES_POR_FUNDO = {
     "Galpon",
     "Oficina Tecnica",
     "Comedor Administrativo",
+    "Comedor de Inducción",
   ],
   "LICAPA II": [
     "Comedor 6",
